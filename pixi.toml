@@ -1,0 +1,32 @@
+[project]
+authors = ["Willow Ahrens <willow.marie.ahrens@gmail.com>"]
+channels = ["conda-forge"]
+description = "Sparse And Structured Tensor Programming"
+name = "finch-tensor-lite"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+compile = "python -c 'import finch'"
+
+[dependencies]
+python = ">=3.10,<3.13"
+juliaup = ">=1.17.10,<2"
+
+[pypi-dependencies]
+finch-tensor-lite = { path = ".", editable = true }
+numpy = ">=1.19"
+
+[feature.test.pypi-dependencies]
+pytest = "*"
+pytest-cov = "*"
+sparse = "*"
+numba = ">=0.60"
+scipy = "*"
+numpy = "==2.*"
+
+[feature.test.tasks]
+test = { cmd = "pytest", depends-on = ["compile"] }
+
+[environments]
+test = ["test"]
