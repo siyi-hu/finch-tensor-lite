@@ -24,7 +24,7 @@ def test_matrix_multiplication(a, b):
         Produces((Alias("C"),)),
     ])
 
-    result = FinchLogicInterpreter()(p)[0].tns
+    result = FinchLogicInterpreter()(p)[0]
 
     expected = np.matmul(a, b)
     

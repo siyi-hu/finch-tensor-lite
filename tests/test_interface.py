@@ -12,7 +12,7 @@ from operator import add, mul
     ],
 )
 def test_matrix_multiplication(a, b):
-    result = finch.fuse(lambda a, b: finch.reduce(add, finch.broadcast(mul, finch.expand_dims(a, 2), b), axis=1), a, b)[0]
+    result = finch.fuse(lambda a, b: finch.reduce(add, finch.broadcast(mul, finch.expand_dims(a, 2), b), axis=1), a, b)
 
     expected = np.matmul(a, b)
     

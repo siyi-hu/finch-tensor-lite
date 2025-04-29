@@ -108,7 +108,7 @@ class FinchLogicInterpreter:
                 res = self(body)
             return res
         elif head == Produces:
-            return tuple(map(self, node.args))
+            return tuple(self(arg).tns for arg in node.args)
         elif head == Subquery:
             if not node.lhs in self.bindings:
                 self.bindings[node.lhs] = self(node.rhs)

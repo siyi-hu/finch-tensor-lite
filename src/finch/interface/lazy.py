@@ -13,7 +13,7 @@ from ..symbolic import gensym
 @dataclass
 class LazyTensor:
     data: LogicNode
-    shape: tuple
+    shape: Tuple
     fill_value: Any
     element_type: Any
 
@@ -21,10 +21,18 @@ class LazyTensor:
     def ndim(self) -> int:
         return len(self.shape)
 
-register_property(LazyTensor, "__self__", "fill_value", lambda x: x.fill_value)
-register_property(LazyTensor, "__self__", "element_type", lambda x: x.element_type)
-
 def lazy(arr) -> LazyTensor:
+    """
+        - lazy(arr) -> LazyTensor:
+        Converts an array into a LazyTensor. If the input is already a LazyTensor, it is returned as-is.
+        Otherwise, it creates a LazyTensor representation of the input array.
+
+        Parameters:
+        - arr: The input array to be converted into a LazyTensor.
+
+        Returns:
+        - LazyTensor: A lazy representation of the input array.
+    """
     if isinstance(arr, LazyTensor):
         return arr
     name = Alias(gensym("A"))
@@ -32,6 +40,38 @@ def lazy(arr) -> LazyTensor:
     shape = tuple(arr.shape)
     tns = Subquery(name, Table(Immediate(arr), idxs))
     return LazyTensor(tns, shape, fill_value(arr), element_type(arr))
+
+def get_default_scheduler():
+    return FinchLogicInterpreter()
+
+def compute(arg, ctx=get_default_scheduler()):
+    """
+    - compute(arg, ctx=get_default_scheduler()):
+    Executes a fused operation represented by LazyTensors. This function evaluates the entire
+    operation in an optimized manner using the provided scheduler.
+
+    Parameters:
+    - arg: A lazy tensor or a tuple of lazy tensors representing the fused operation to be computed.
+    - ctx: The scheduler to use for computation. Defaults to the result of `get_default_scheduler()`.
+
+    Returns:
+    - A tensor or a list of tensors computed by the fused operation.
+    """
+    if isinstance(arg, tuple):
+        args = arg
+    else:
+        args = (arg,)
+    vars = tuple(Alias(gensym("A")) for _ in args)
+    bodies = tuple(map(lambda arg, var: Query(var, arg.data), args, vars))
+    prgm = Plan(bodies + (Produces(vars),))
+    res = ctx(prgm)
+    if isinstance(arg, tuple):
+        return tuple(res)
+    else:
+        return res[0]
+
+register_property(LazyTensor, "__self__", "fill_value", lambda x: x.fill_value)
+register_property(LazyTensor, "__self__", "element_type", lambda x: x.element_type)
 
 def permute_dims(arg: LazyTensor, /, axis: Tuple[int, ...]) -> LazyTensor:
     axis = normalize_axis_tuple(axis, arg.ndim + len(axis))
@@ -145,19 +185,3 @@ def prod(arr: LazyTensor, dims) -> LazyTensor:
 
 def multiply(x1: LazyTensor, x2: LazyTensor) -> LazyTensor:
     return broadcast(operator.mul, x1, x2)
-
-def get_default_scheduler():
-    return FinchLogicInterpreter()
-
-def compute(*args, ctx=get_default_scheduler()):
-    vars = tuple(Alias("A") for _ in args)
-    bodies = tuple(map(lambda arg, var: Query(var, arg.data), args, vars))
-    prgm = Plan(bodies + (Produces(vars),))
-    return [arg.tns for arg in ctx(prgm)]
-
-def fuse(f, *args, ctx=get_default_scheduler()):
-    args = [lazy(arg) for arg in args]
-    if len(args) == 1:
-        return f(args[0])
-    return compute(f(*args), ctx=ctx)
-
