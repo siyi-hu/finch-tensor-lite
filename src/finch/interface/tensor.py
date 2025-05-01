@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from . import lazy
 from .fuse import *
 
-class AbstractTensor(ABC):
+class EagerTensor(ABC):
     @abstractmethod
     def shape(self):
         """Return the shape of the tensor."""
@@ -20,13 +20,15 @@ class AbstractTensor(ABC):
 
     @abstractmethod
     def __add__(self, other):
-        """Define addition for tensors."""
-        pass
+        compute(lazy.lazy(self).__add__(other))
 
     @abstractmethod
     def __mul__(self, other):
         """Define multiplication for tensors."""
         pass
 
-def prod(arr: Tensor, dims):
-    return compute(lazy.prod(lazy.lazy(arr), dims))
+def prod(arr, /, axis=None):
+    if arr.is_lazy():
+        return lazy.prod(arr, axis=axis)
+    else:
+        return compute(lazy.prod(lazy.lazy(arr), axis=axis))
