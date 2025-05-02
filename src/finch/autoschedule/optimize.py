@@ -1,6 +1,6 @@
 from .compiler import LogicCompiler
-from .finch_logic import Aggregate, Alias, LogicNode, MapJoin, Plan, Produces, Query
-from .rewrite_tools import Chain, PostOrderDFS, PostWalk, PreWalk, Rewrite
+from ..finch_logic import Aggregate, Alias, LogicNode, MapJoin, Plan, Produces, Query
+from ..symbolic import Chain, PostOrderDFS, PostWalk, PreWalk, Rewrite
 
 
 def optimize(prgm: LogicNode) -> LogicNode:

@@ -191,6 +191,10 @@ class MapJoin(LogicNode):
         """Returns the children of the node."""
         return [self.op, *self.args]
 
+    @classmethod
+    def make_term(cls, head, op, *args):
+        return head(op, args)
+
 
 @dataclass(eq=True, frozen=True)
 class Aggregate(LogicNode):
@@ -412,3 +416,7 @@ class Plan(LogicNode):
     def children(self):
         """Returns the children of the node."""
         return [*self.bodies]
+
+    @classmethod
+    def make_term(cls, head, *val):
+        return head(val)

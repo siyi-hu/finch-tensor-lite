@@ -87,7 +87,7 @@ class PostWalk:
             new_args = list(map(self, args))
             if all(arg is None for arg in new_args):
                 return self.rw(x)
-            y = x.make_term(*map(lambda x1, x2: default_rewrite(x1, x2), new_args, args))
+            y = x.make_term(x.head(), *map(lambda x1, x2: default_rewrite(x1, x2), new_args, args))
             return default_rewrite(self.rw(y), y)
         return self.rw(x)
 
