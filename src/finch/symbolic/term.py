@@ -30,7 +30,10 @@ class Term(ABC):
 
     @abstractmethod
     def make_term(self, head: Any, children: List[Term]) -> Term:
-        """Construct a new term in the same family of terms with the given head type and children."""
+        """
+            Construct a new term in the same family of terms with the given head type and children.
+            This function should satisfy `x == x.make_term(x.head(), *x.children())`
+        """
         pass
 
     def __hash__(self) -> int:
