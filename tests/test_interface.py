@@ -4,7 +4,6 @@ import pytest
 import finch
 from operator import add, mul
 
-
 @pytest.mark.parametrize(
     "a, b",
     [
