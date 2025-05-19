@@ -1,21 +1,44 @@
-from .lazy import *
-#from .tensor import *
-from .fuse import *
+from .lazy import defer, LazyTensor
+
+# from .tensor import *
+from .fuse import compute, fuse, fused
+from .eager import (
+    AbstractEagerTensor,
+    add,
+    subtract,
+    multiply,
+    abs,
+    positive,
+    negative,
+    sum,
+    prod,
+    permute_dims,
+    expand_dims,
+    squeeze,
+    reduce,
+    elementwise,
+)
 
 __all__ = [
-    "lazy",
+    "defer",
     "compute",
     "fuse",
     "fused",
     "permute_dims",
     "expand_dims",
     "squeeze",
-    "identify",
     "reduce",
     "elementwise",
-    "prod",
-    "multiply",
     "sum",
+    "prod",
+    "add",
+    "subtract",
+    "multiply",
+    "abs",
+    "positive",
+    "negative",
+    "AbstractEagerTensor",
+    "LazyTensor",
     "any",
     "all",
     "min",
