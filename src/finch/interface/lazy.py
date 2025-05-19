@@ -366,139 +366,53 @@ def positive(x) -> LazyTensor:
 def negative(x) -> LazyTensor:
     return elementwise(operator.neg, defer(x))
 
-def any(
-        arr: LazyTensor,
-        /,
-        *,
-        axis: int | tuple[int, ...] | None = None,
-        keepdims: bool = False
-    ) -> LazyTensor:
-    """
-    Test whether any element of input array ``arr`` along given axis is True.
-    """
-    return reduce(operator.or_, arr, axis=axis, keepdims=keepdims, init=arr.fill_value)
 
-def all(
-        arr: LazyTensor,
-        /,
-        *,
-        axis: int | tuple[int, ...] | None = None,
-        keepdims: bool = False
-    ) -> LazyTensor:
+def any(arr: LazyTensor, dims) -> LazyTensor:
     """
-    Test whether all elements of input array ``arr`` along given axis are True.
+    Test whether any element of input array ``x`` along given axis is True.
     """
-    return reduce(operator.and_, arr, axis=axis, keepdims=keepdims, init=arr.fill_value)
+    return reduce(operator.or_, arr, axis=dims, init=arr.fill_value)
 
-# def _flatten(x):
-#     for y in x:
-#         if isinstance(y, (list, tuple)):
-#             yield from _flatten(y)
-#         else:
-#             yield y
-
-def min(
-        arr: LazyTensor,
-        /,
-        *,
-        axis: int | tuple[int, ...] | None = None,
-        keepdims: bool = False    
-    ) -> LazyTensor:
+def all(arr: LazyTensor, dims) -> LazyTensor:
     """
-    Return the minimum of input array ``arr`` along given axis.
+    Test whether all elements of input array ``x`` along given axis are True.
     """
-    return reduce(builtins.min, arr, axis=axis, keepdims=keepdims, init=arr.fill_value)
-
-def max(
-        arr: LazyTensor,
-        /,
-        *,
-        axis: int | tuple[int, ...] | None = None,
-        keepdims: bool = False
-    ) -> LazyTensor:
-    """
-    Return the maximum of input array ``arr`` along given axis.
-    """
-    return reduce(builtins.max, arr, axis=axis, keepdims=keepdims, init=arr.fill_value)
+    return reduce(operator.and_, arr, axis=dims, init=arr.fill_value)
 
 
-def mean(
-        arr: LazyTensor,
-        /,
-        *,
-        axis: int | tuple[int, ...] | None = None,
-        keepdims: bool = False
-    ) -> LazyTensor:
+def min(arr: LazyTensor, dims) -> LazyTensor:
     """
-    Calculates the arithmetic mean of the input array ``arr``.
+    Return the minimum of input array ``x`` along given axis.
     """
-    origin = np.asarray(arr.shape)
-    ele_no = origin[axis]
-    n = lazy(np.full(np.delete(origin, axis), ele_no, dtype=int))
+    return reduce(operator.mul, arr, axis=dims, init=arr.fill_value)
 
-    s = sum(arr, axis=axis, keepdims=keepdims)
+def max(arr: LazyTensor, dims) -> LazyTensor:
+    """
+    Return the maximum of input array ``x`` along given axis.
+    """
+    return reduce(operator.mul, arr, axis=dims, init=arr.fill_value)
 
-    return elementwise(operator.truediv, s, n)
+def mean(arr: LazyTensor, dims) -> LazyTensor:
+    """
+    """
+    return reduce(operator.mul, arr, axis=dims, init=arr.fill_value)
 
-def var(
-        arr: LazyTensor,
-        /,
-        *,
-        axis: int | tuple[int, ...] | None = None,
-        correction: int | float = 0.0,
-        keepdims: bool = False
-    ) -> LazyTensor:
+def std(arr: LazyTensor, dims) -> LazyTensor:
     """
-    Calculates the variance of the input array ``arr``.
     """
-    origin = np.asarray(arr.shape)
-    ele_no = origin[axis]
-    n = lazy(np.full(np.delete(origin, axis), ele_no, dtype=int))
+    return reduce(operator.mul, arr, axis=dims, init=arr.fill_value)
 
-    m = mean(arr, axis=axis, keepdims=keepdims)
-    # TODO: Confirm whether we have broadcasting or reshape interface for lazyTensor
-    # v = elementwise(operator.sub, arr, m)
-    # v2 = elementwise(operator.mul, v, v)
-    # return elementwise(operator.truediv, sum(v, axis=axis, keepdims=keepdims), n)
+def var(arr: LazyTensor, dims) -> LazyTensor:
+    """
+    """
+    return reduce(operator.mul, arr, axis=dims, init=arr.fill_value)
 
-    return reduce(operator.add, arr, axis=axis, keepdims=keepdims, init=arr.fill_value)
+def argmin(arr: LazyTensor, dims) -> LazyTensor:
+    """
+    """
+    return reduce(operator.mul, arr, axis=dims, init=arr.fill_value)
 
-def std(
-        arr: LazyTensor,
-        /,
-        *,
-        axis: int | tuple[int, ...] | None = None,
-        correction: int | float = 0.0,
-        keepdims: bool = False
-    ) -> LazyTensor:
+def argmax(arr: LazyTensor, dims) -> LazyTensor:
     """
-    Calculates the standard deviation of the input array ``arr``.
     """
-    # TODO: Need sqrt operator?
-    # d = var(arr, axis=axis, keepdims=keepdims, correction=correction)
-    # return elementwise(operator.sqrt, d)
-    return reduce(operator.add, arr, axis=axis, keepdims=keepdims, init=arr.fill_value)
-
-def argmin(
-        arr: LazyTensor,
-        /,
-        *,
-        axis: int | tuple[int, ...] | None = None,
-        keepdims: bool = False
-    ) -> LazyTensor:
-    """
-    Returns the indices of the minimum values along a specified axis.
-    """
-    return reduce(operator.add, arr, axis=axis, keepdims=keepdims, init=arr.fill_value)
-
-def argmax(
-        arr: LazyTensor,
-        /,
-        *,
-        axis: int | tuple[int, ...] | None = None,
-        keepdims: bool = False
-    ) -> LazyTensor:
-    """
-    Returns the indices of the maximum values along a specified axis.
-    """
-    return reduce(operator.add, arr, axis=axis, keepdims=keepdims, init=arr.fill_value)
+    return reduce(operator.mul, arr, axis=dims, init=arr.fill_value)
