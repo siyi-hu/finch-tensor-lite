@@ -90,7 +90,6 @@ def register_property(cls, attr, prop, f):
             object and any additional arguments as input.
     """
     _properties[(cls, attr, prop)] = f
-    print(_properties)
 
 
 def fill_value(arg: Any) -> Any:
@@ -298,10 +297,6 @@ for op in [operator.add, operator.mul, operator.and_, operator.xor, operator.or_
         "init_value",
         lambda op, arg, meth=meth: query_property(arg, meth, "init_value", arg),
     )
-
-# For min, max ...
-# register_property(min, '__call__', 'init_value', lambda op, arg: _min_init(element_type(arg)))
-# register_property(max, '__call__', 'init_value', lambda op, arg: _max_init(element_type(arg)))
 
 for T in StableNumber:
     register_property(T, "__add__", "init_value", lambda a, b: a(False))

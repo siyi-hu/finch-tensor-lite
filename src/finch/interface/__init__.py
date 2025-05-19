@@ -39,13 +39,4 @@ __all__ = [
     "negative",
     "AbstractEagerTensor",
     "LazyTensor",
-    "any",
-    "all",
-    "min",
-    "max",
-    "mean",
-    "std",
-    "var",
-    "argmin",
-    "argmax",
 ]

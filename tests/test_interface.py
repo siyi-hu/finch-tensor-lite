@@ -4,6 +4,7 @@ import pytest
 import finch
 import operator
 
+
 @pytest.mark.parametrize(
     "a, b",
     [
