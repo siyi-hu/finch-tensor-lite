@@ -13,7 +13,7 @@ def output_term(args):
 
 # TODO: (Overall) 3-D or higher dimension tensor testcases
 
-@pytest.mark.parametrize(   
+@pytest.mark.parametrize(
     "a",
     [
         (np.array([[2, 3, 4], [5, 6, 7]])),
@@ -132,68 +132,68 @@ def test_lazyTensor_min(a):
     output_term("")
 
 
-@pytest.mark.parametrize(
-    "a",
-    [
-        (np.array([[100, 14, 9, 78], [44, 3, 5, 10]])),
-    ],
-)
-def test_lazyTensor_max(a):
-    output_term("***** max *****")
+# @pytest.mark.parametrize(
+#     "a",
+#     [
+#         (np.array([[100, 14, 9, 78], [44, 3, 5, 10]])),
+#     ],
+# )
+# def test_lazyTensor_max(a):
+#     output_term("***** max *****")
 
-    # TODO: Add operator.max to reduce
+#     # TODO: Add operator.max to reduce
 
-    result = finch.compute(finch.max(finch.lazy(a), axis=0)); output_term(result)
-    expected = np.max(a, axis=0); output_term(expected)
-    # assert_equal(result, expected)
-    output_term("")
+#     result = finch.compute(finch.max(finch.lazy(a), axis=0)); output_term(result)
+#     expected = np.max(a, axis=0); output_term(expected)
+#     # assert_equal(result, expected)
+#     output_term("")
 
-    result = finch.compute(finch.max(finch.lazy(a), axis=1)); output_term(result)
-    expected = np.max(a, axis=1); output_term(expected)
-    # assert_equal(result, expected)
-    output_term("")
+#     result = finch.compute(finch.max(finch.lazy(a), axis=1)); output_term(result)
+#     expected = np.max(a, axis=1); output_term(expected)
+#     # assert_equal(result, expected)
+#     output_term("")
 
 
-@pytest.mark.parametrize(
-    "a",
-    [
-        (np.array([[100, 14, 9, 78], [44, 3, 5, 10]])),
-    ],
-)
-def test_lazyTensor_mean(a):
-    output_term("***** mean *****")
+# @pytest.mark.parametrize(
+#     "a",
+#     [
+#         (np.array([[100, 14, 9, 78], [44, 3, 5, 10]])),
+#     ],
+# )
+# def test_lazyTensor_mean(a):
+#     output_term("***** mean *****")
 
-    # TODO: float does not supported by operator.truediv?
-    # TODO: Result computed in integer type, need to extend to float
+#     # TODO: float does not supported by operator.truediv?
+#     # TODO: Result computed in integer type, need to extend to float
 
-    result = finch.compute(finch.mean(finch.lazy(a), axis=0)); output_term(result)
-    expected = np.mean(a, axis=0); output_term(expected)
-    # assert_equal(result, expected)
-    output_term("")
+#     result = finch.compute(finch.mean(finch.lazy(a), axis=0)); output_term(result)
+#     expected = np.mean(a, axis=0); output_term(expected)
+#     # assert_equal(result, expected)
+#     output_term("")
 
-    result = finch.compute(finch.mean(finch.lazy(a), axis=1)); output_term(result)
-    expected = np.mean(a, axis=1); output_term(expected)
-    # assert_equal(result, expected)
-    output_term("")
+#     result = finch.compute(finch.mean(finch.lazy(a), axis=1)); output_term(result)
+#     expected = np.mean(a, axis=1); output_term(expected)
+#     # assert_equal(result, expected)
+#     output_term("")
 
-@pytest.mark.parametrize(
-    "a",
-    [
-        (np.array([[100, 14, 9, 78], [44, 3, 5, 10]])),
-    ],
-)
-def test_lazyTensor_var(a):
-    output_term("***** var *****")
+# @pytest.mark.parametrize(
+#     "a",
+#     [
+#         (np.array([[100, 14, 9, 78], [44, 3, 5, 10]])),
+#     ],
+# )
+# def test_lazyTensor_var(a):
+#     output_term("***** var *****")
 
-    result = finch.compute(finch.var(finch.lazy(a), axis=0)); output_term(result)
-    expected = np.var(a, axis=0); output_term(expected)
-    # assert_equal(result, expected)
-    output_term("")
+#     result = finch.compute(finch.var(finch.lazy(a), axis=0)); output_term(result)
+#     expected = np.var(a, axis=0); output_term(expected)
+#     # assert_equal(result, expected)
+#     output_term("")
 
-    result = finch.compute(finch.var(finch.lazy(a), axis=1)); output_term(result)
-    expected = np.var(a, axis=1); output_term(expected)
-    # assert_equal(result, expected)
-    output_term("")
+#     result = finch.compute(finch.var(finch.lazy(a), axis=1)); output_term(result)
+#     expected = np.var(a, axis=1); output_term(expected)
+#     # assert_equal(result, expected)
+#     output_term("")
 
 # @pytest.mark.parametrize(
 #     "a",

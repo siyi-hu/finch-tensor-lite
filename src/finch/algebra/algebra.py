@@ -89,6 +89,7 @@ def register_property(cls, attr, prop, f):
             object and any additional arguments as input.
     """
     _properties[(cls, attr, prop)] = f
+    print(_properties)
 
 def fill_value(arg: Any) -> Any:
     """The fill value for the given argument.  The fill value is the
@@ -155,6 +156,8 @@ _reflexive_operators = {
     operator.and_: ("__and__", "__rand__"),
     operator.xor: ("__xor__", "__rxor__"),
     operator.or_: ("__or__", "__ror__"),
+    min: ("__min__", "__rmin__"),
+    max: ("__max__", "__rmax__"),
 }
 
 for op, (meth, rmeth) in _reflexive_operators.items():
@@ -221,6 +224,10 @@ def init_value(op, arg) -> Any:
 for op in [operator.add, operator.mul, operator.and_, operator.xor, operator.or_]:
     (meth, rmeth) = _reflexive_operators[op]
     register_property(op, '__call__', 'init_value', lambda op, arg: query_property(arg, meth, 'init_value', arg))
+
+# For min, max ...
+# register_property(min, '__call__', 'init_value', lambda op, arg: _min_init(element_type(arg)))
+# register_property(max, '__call__', 'init_value', lambda op, arg: _max_init(element_type(arg)))
 
 for T in StableNumber:
     register_property(T, '__add__', 'init_value', lambda a, b: a(False))

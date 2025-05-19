@@ -396,22 +396,7 @@ def min(
     """
     Return the minimum of input array ``arr`` along given axis.
     """
-#     num_rows = arr.shape[0]
-#     num_cols = arr.shape[1]
-
-#     if axis is None:
-#         return min(_flatten(arr))
-
-#     # column‑wise minimum
-#     if axis == 0:
-#         return [min(arr[r][c] for r in range(num_rows)) for c in range(num_cols)]
-#     # row‑wise minimum
-
-#     if axis == 1:
-#         return [min(row) for row in arr]
-
-    # TODO: Use operator.min to reduce?
-    return reduce(operator.add, arr, axis=axis, keepdims=keepdims, init=arr.fill_value)
+    return reduce(builtins.min, arr, axis=axis, keepdims=keepdims, init=arr.fill_value)
 
 def max(
         arr: LazyTensor,
@@ -423,8 +408,7 @@ def max(
     """
     Return the maximum of input array ``arr`` along given axis.
     """
-    # TODO: Use operator.max to reduce?
-    return reduce(operator.add, arr, axis=axis, keepdims=keepdims, init=arr.fill_value)
+    return reduce(builtins.max, arr, axis=axis, keepdims=keepdims, init=arr.fill_value)
 
 
 def mean(
