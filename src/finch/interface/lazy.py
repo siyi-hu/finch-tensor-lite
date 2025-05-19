@@ -391,13 +391,6 @@ def all(
     """
     return reduce(operator.and_, arr, axis=axis, keepdims=keepdims, init=arr.fill_value)
 
-# def _flatten(x):
-#     for y in x:
-#         if isinstance(y, (list, tuple)):
-#             yield from _flatten(y)
-#         else:
-#             yield y
-
 def min(
         arr: LazyTensor,
         /,
@@ -435,7 +428,7 @@ def mean(
     """
     origin = np.asarray(arr.shape)
     ele_no = origin[axis]
-    n = lazy(np.full(np.delete(origin, axis), ele_no, dtype=int))
+    n = defer(np.full(np.delete(origin, axis), ele_no, dtype=int))
 
     s = sum(arr, axis=axis, keepdims=keepdims)
 
@@ -454,7 +447,7 @@ def var(
     """
     origin = np.asarray(arr.shape)
     ele_no = origin[axis]
-    n = lazy(np.full(np.delete(origin, axis), ele_no, dtype=int))
+    n = defer(np.full(np.delete(origin, axis), ele_no, dtype=int))
 
     m = mean(arr, axis=axis, keepdims=keepdims)
     # TODO: Confirm whether we have broadcasting or reshape interface for lazyTensor
