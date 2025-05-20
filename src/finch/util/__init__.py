@@ -1,4 +1,4 @@
 from .cache import file_cache
-from .config import get_config, get_version, reset_config, set_config
+from .config import config, get_version
 
-__all__ = ["get_config", "set_config", "reset_config", "file_cache", "get_version"]
+__all__ = ["config", "file_cache", "get_version"]
