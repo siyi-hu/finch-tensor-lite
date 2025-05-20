@@ -13,7 +13,11 @@ repos:
   rev: v0.11.10
   hooks:
     - id: ruff-check
-      args: ["--fix"]
+      args: [--fix, --config=pyproject.toml]
       types_or: [ python, pyi, jupyter ]
     - id: ruff-format
+      args: [--config=pyproject.toml]
       types_or: [ python, pyi, jupyter ]
+
+ci:
+    autofix_prs: false
