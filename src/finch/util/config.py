@@ -4,6 +4,7 @@ import sys
 import sysconfig
 from importlib.metadata import version
 from pathlib import Path
+
 import donfig  # type: ignore
 
 """
