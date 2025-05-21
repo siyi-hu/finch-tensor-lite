@@ -38,7 +38,9 @@ def isolate_aggregates(root: LogicNode) -> LogicNode:
                 name = Alias(gensym("A"))
                 return Subquery(name, agg)
 
-    return PostWalk(rule_0)(root)
+    ret = PostWalk(rule_0)(root)
+    assert ret is not None
+    return ret
 
 
 def isolate_reformats(root: LogicNode) -> LogicNode:
@@ -48,7 +50,9 @@ def isolate_reformats(root: LogicNode) -> LogicNode:
                 name = Alias(gensym("A"))
                 return Subquery(name, ref)
 
-    return PostWalk(rule_0)(root)
+    ret = PostWalk(rule_0)(root)
+    assert ret is not None
+    return ret
 
 
 def isolate_tables(root: LogicNode) -> LogicNode:
@@ -58,12 +62,14 @@ def isolate_tables(root: LogicNode) -> LogicNode:
                 name = Alias(gensym("A"))
                 return Subquery(name, tbl)
 
-    return PostWalk(rule_0)(root)
+    ret = PostWalk(rule_0)(root)
+    assert ret is not None
+    return ret
 
 
 def pretty_labels(root: LogicNode) -> LogicNode:
-    fields = {}
-    aliases = {}
+    fields: dict[Field, Field] = {}
+    aliases: dict[Alias, Alias] = {}
 
     def rule_0(node):
         match node:
@@ -78,7 +84,9 @@ def pretty_labels(root: LogicNode) -> LogicNode:
     return Rewrite(PostWalk(Chain([rule_0, rule_1])))(root)
 
 
-def _lift_subqueries_expr(node: LogicNode, bindings: dict) -> LogicNode:
+def _lift_subqueries_expr(
+    node: LogicNode, bindings: dict[LogicNode, LogicNode]
+) -> LogicNode:
     match node:
         case Subquery(lhs, arg):
             if lhs not in bindings:
@@ -99,7 +107,7 @@ def lift_subqueries(node: LogicNode) -> LogicNode:
         case Plan(bodies):
             return Plan(tuple(map(lift_subqueries, bodies)))
         case Query(lhs, rhs):
-            bindings = {}
+            bindings: dict[LogicNode, LogicNode] = {}
             rhs_2 = _lift_subqueries_expr(rhs, bindings)
             return Plan(
                 (*[Query(lhs, rhs) for lhs, rhs in bindings.items()], Query(lhs, rhs_2))
@@ -124,6 +132,7 @@ def propagate_map_queries(root: LogicNode) -> LogicNode:
                 return MapJoin(op, (init, arg))
 
     root = Rewrite(PostWalk(rule_agg_to_mapjoin))(root)
+    assert isinstance(root, LogicNode)
     rets = _get_productions(root)
     props = {}
     for node in PostOrderDFS(root):

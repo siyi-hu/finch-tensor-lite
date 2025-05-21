@@ -21,13 +21,16 @@ Classes:
 """
 
 from collections.abc import Callable, Iterable
+from typing import TypeVar
 
 from .term import Term
 
-RwCallable = Callable[[Term], Term | None]
+T = TypeVar("T", bound="Term")
+
+RwCallable = Callable[[T], T | None]
 
 
-def default_rewrite(x: Term | None, y: Term) -> Term:
+def default_rewrite(x: T | None, y: T) -> T:
     return x if x is not None else y
 
 
@@ -42,7 +45,7 @@ class Rewrite:
     def __init__(self, rw: RwCallable):
         self.rw = rw
 
-    def __call__(self, x: Term) -> Term:
+    def __call__(self, x: T) -> T:
         return default_rewrite(self.rw(x), x)
 
 
@@ -59,7 +62,7 @@ class PreWalk:
     def __init__(self, rw: RwCallable):
         self.rw = rw
 
-    def __call__(self, x: Term) -> Term | None:
+    def __call__(self, x: T) -> T | None:
         y = self.rw(x)
         if y is not None:
             if y.is_expr():
@@ -93,7 +96,7 @@ class PostWalk:
     def __init__(self, rw: RwCallable):
         self.rw = rw
 
-    def __call__(self, x: Term) -> Term | None:
+    def __call__(self, x: T) -> T | None:
         if x.is_expr():
             args = x.children()
             new_args = list(map(self, args))
@@ -118,7 +121,7 @@ class Chain:
     def __init__(self, rws: Iterable[RwCallable]):
         self.rws = rws
 
-    def __call__(self, x: Term) -> Term | None:
+    def __call__(self, x: T) -> T | None:
         is_success = False
         for rw in self.rws:
             y = rw(x)
@@ -142,7 +145,7 @@ class Fixpoint:
     def __init__(self, rw: RwCallable):
         self.rw = rw
 
-    def __call__(self, x: Term) -> Term | None:
+    def __call__(self, x: T) -> T | None:
         y = self.rw(x)
         if y is not None:
             while y is not None and x != y:
@@ -164,7 +167,7 @@ class Prestep:
     def __init__(self, rw: RwCallable):
         self.rw = rw
 
-    def __call__(self, x: Term) -> Term | None:
+    def __call__(self, x: T) -> T | None:
         y = self.rw(x)
         if y is not None:
             if y.is_expr():
@@ -186,11 +189,11 @@ class Memo:
         cache (dict): A dictionary to store cached results.
     """
 
-    def __init__(self, rw: RwCallable, cache: dict = None):
+    def __init__(self, rw: RwCallable, cache: dict | None = None):
         self.rw = rw
         self.cache = cache if cache is not None else {}
 
-    def __call__(self, x: Term) -> Term | None:
+    def __call__(self, x: T) -> T | None:
         if x not in self.cache:
             self.cache[x] = self.rw(x)
         return self.cache[x]

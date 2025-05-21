@@ -1,13 +1,14 @@
+defaults:
+      run:
+        shell: bash -el {0}
+
 name: CI
 jobs:
   test:
-    defaults:
-      run:
-        shell: bash -el {0}
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python: ['3.11', '3.12']
+        python: ['3.11', '3.12', '3.13']
         include:
           - os: macos-latest
             python: '3.11'
@@ -17,7 +18,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
@@ -29,7 +30,24 @@ jobs:
       - name: Run tests
         run: |
           poetry run pytest --junit-xml=test-${{ matrix.os }}-Python-${{ matrix.python }}.xml
-      - uses: codecov/codecov-action@v3
+      - uses: codecov/codecov-action@v5
+  typecheck:
+    runs-on: 'ubuntu-latest'
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+      - name: Install package
+        run: |
+          poetry install --with test
+      - name: Run type-checking
+        run: |
+          poetry run mypy .
+      - uses: codecov/codecov-action@v5
 
 on:
   # Trigger the workflow on push or pull request,
