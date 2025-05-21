@@ -4,6 +4,7 @@ from ..finch_logic import (
     Aggregate,
     Alias,
     Field,
+    Immediate,
     LogicNode,
     MapJoin,
     Plan,
@@ -11,10 +12,12 @@ from ..finch_logic import (
     Query,
     Reformat,
     Relabel,
+    Reorder,
     Subquery,
     Table,
 )
-from ..symbolic import Chain, PostOrderDFS, PostWalk, PreWalk, Rewrite, gensym
+from ..symbolic import Chain, Fixpoint, PostOrderDFS, PostWalk, PreWalk, Rewrite, gensym
+from ._utils import intersect, is_subsequence, setdiff, with_subsequence
 from .compiler import LogicCompiler
 
 
@@ -38,7 +41,7 @@ def isolate_aggregates(root: LogicNode) -> LogicNode:
                 name = Alias(gensym("A"))
                 return Subquery(name, agg)
 
-    return PostWalk(rule_0)(root)
+    return Rewrite(PostWalk(rule_0))(root)
 
 
 def isolate_reformats(root: LogicNode) -> LogicNode:
@@ -48,7 +51,7 @@ def isolate_reformats(root: LogicNode) -> LogicNode:
                 name = Alias(gensym("A"))
                 return Subquery(name, ref)
 
-    return PostWalk(rule_0)(root)
+    return Rewrite(PostWalk(rule_0))(root)
 
 
 def isolate_tables(root: LogicNode) -> LogicNode:
@@ -58,12 +61,12 @@ def isolate_tables(root: LogicNode) -> LogicNode:
                 name = Alias(gensym("A"))
                 return Subquery(name, tbl)
 
-    return PostWalk(rule_0)(root)
+    return Rewrite(PostWalk(rule_0))(root)
 
 
 def pretty_labels(root: LogicNode) -> LogicNode:
-    fields = {}
-    aliases = {}
+    fields: dict[Field, Field] = {}
+    aliases: dict[Alias, Alias] = {}
 
     def rule_0(node):
         match node:
@@ -78,7 +81,9 @@ def pretty_labels(root: LogicNode) -> LogicNode:
     return Rewrite(PostWalk(Chain([rule_0, rule_1])))(root)
 
 
-def _lift_subqueries_expr(node: LogicNode, bindings: dict) -> LogicNode:
+def _lift_subqueries_expr(
+    node: LogicNode, bindings: dict[LogicNode, LogicNode]
+) -> LogicNode:
     match node:
         case Subquery(lhs, arg):
             if lhs not in bindings:
@@ -99,7 +104,7 @@ def lift_subqueries(node: LogicNode) -> LogicNode:
         case Plan(bodies):
             return Plan(tuple(map(lift_subqueries, bodies)))
         case Query(lhs, rhs):
-            bindings = {}
+            bindings: dict[LogicNode, LogicNode] = {}
             rhs_2 = _lift_subqueries_expr(rhs, bindings)
             return Plan(
                 (*[Query(lhs, rhs) for lhs, rhs in bindings.items()], Query(lhs, rhs_2))
@@ -124,6 +129,7 @@ def propagate_map_queries(root: LogicNode) -> LogicNode:
                 return MapJoin(op, (init, arg))
 
     root = Rewrite(PostWalk(rule_agg_to_mapjoin))(root)
+    assert isinstance(root, LogicNode)
     rets = _get_productions(root)
     props = {}
     for node in PostOrderDFS(root):
@@ -170,6 +176,100 @@ def _propagate_fields(
 
 def propagate_fields(root: LogicNode) -> LogicNode:
     return _propagate_fields(root, fields={})
+
+
+def push_fields(root):
+    def rule_0(ex):
+        # relabel(mapjoin(_, [1,2], [1,2]), [11,22]) =>
+        #     mapjoin(
+        #         _, relabel([1,2], [11,22]), relabel([1,2], [11,22])
+        #     )
+        match ex:
+            case Relabel(MapJoin(op, args) as mj, idxs):
+                reidx = dict(zip(mj.get_fields(), idxs, strict=True))
+                return MapJoin(
+                    op,
+                    tuple(
+                        Relabel(arg, tuple(reidx[f] for f in mj.get_fields()))
+                        for arg in args
+                    ),
+                )
+
+    def rule_1(ex):
+        # relabel(agg(..., [1,2,3], 3), [11,22]) =>
+        #     agg(..., relabel([1,2,3], [11,22,3]), 3)
+        match ex:
+            case Relabel(Aggregate(op, init, arg, agg_idxs), relabel_idxs):
+                diff_idxs = setdiff(arg.get_fields(), agg_idxs)
+                reidx_dict = dict(zip(diff_idxs, relabel_idxs, strict=True))
+                relabeled_idxs = tuple(
+                    reidx_dict.get(idx, idx) for idx in arg.get_fields()
+                )
+                return Aggregate(op, init, Relabel(arg, relabeled_idxs), agg_idxs)
+
+    def rule_2(ex):
+        match ex:
+            case Relabel(Relabel(arg, _), idxs):
+                return Relabel(arg, idxs)
+
+    def rule_3(ex):
+        # relabel(reorder(_, [2,1]), [11,22]) => reorder(relabel(_, [22,11]), [11,22])
+        match ex:
+            case Relabel(Reorder(arg, idxs_1), idxs_2):
+                idxs_3 = arg.get_fields()
+                reidx_dict = dict(zip(idxs_1, idxs_2, strict=True))
+                idxs_4 = tuple(reidx_dict.get(idx, idx) for idx in idxs_3)
+                return Reorder(Relabel(arg, idxs_4), idxs_2)
+
+    def rule_4(ex):
+        match ex:
+            case Relabel(Table(arg, _), idxs):
+                return Table(arg, idxs)
+
+    def rule_5(ex):
+        match ex:
+            case Relabel(Immediate() as arg):
+                return arg
+
+    root = Rewrite(
+        PreWalk(Fixpoint(Chain([rule_0, rule_1, rule_2, rule_3, rule_4, rule_5])))
+    )(root)
+
+    def rule_6(ex):
+        match ex:
+            case Reorder(Reorder(arg, _), idxs):
+                return Reorder(arg, idxs)
+
+    def rule_7(ex):
+        match ex:
+            case Reorder(MapJoin(op, args), idxs):
+                return Reorder(
+                    MapJoin(
+                        op,
+                        tuple(
+                            Reorder(arg, intersect(idxs, arg.get_fields()))
+                            for arg in args
+                        ),
+                    ),
+                    idxs,
+                )
+
+    def rule_8(ex):
+        match ex:
+            case Reorder(Aggregate(op, init, arg, idxs_1), idxs_2) if (
+                not is_subsequence(intersect(arg.get_fields(), idxs_2), idxs_2)
+            ):
+                return Reorder(
+                    Aggregate(
+                        op,
+                        init,
+                        Reorder(arg, with_subsequence(idxs_2, arg.get_fields())),
+                        idxs_1,
+                    ),
+                    idxs_2,
+                )
+
+    return Rewrite(PreWalk(Chain([Fixpoint(rule_6), rule_7, rule_8])))(root)
 
 
 class DefaultLogicOptimizer:

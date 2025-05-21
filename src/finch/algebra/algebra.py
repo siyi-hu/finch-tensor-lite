@@ -44,15 +44,17 @@ property for each subclass individually.
 """
 
 import operator
-from collections.abc import Hashable
+from collections.abc import Callable, Hashable
 from typing import Any
 
 import numpy as np
 
-_properties = {}
+_properties: dict[tuple[type | Hashable, str, str], Any] = {}
+
+StableNumber = bool | int | float | complex | np.generic
 
 
-def query_property(obj, attr, prop, *args):
+def query_property(obj: type | Hashable, attr: str, prop: str, *args) -> Any:
     """Queries a property of an attribute of an object or class.  Properties can
     be overridden by calling register_property on the object or it's class.
 
@@ -68,6 +70,7 @@ def query_property(obj, attr, prop, *args):
     Raises:
         NotImplementedError: If the property is not implemented for the given type.
     """
+    T: type | Hashable
     if isinstance(obj, type):
         T = obj
     else:
@@ -77,7 +80,7 @@ def query_property(obj, attr, prop, *args):
     while True:
         if (T, attr, prop) in _properties:
             return _properties[(T, attr, prop)](obj, *args)
-        if T is object:
+        if T.__base__ is None:
             break
         T = T.__base__
     raise NotImplementedError(f"Property {prop} not implemented for {obj}")
@@ -159,8 +162,6 @@ def return_type(op: Any, *args: Any) -> Any:
     return query_property(op, "__call__", "return_type", *args)
 
 
-StableNumber = bool | int | float | complex | np.generic
-
 _reflexive_operators = {
     operator.add: ("__add__", "__radd__"),
     operator.sub: ("__sub__", "__rsub__"),
@@ -188,6 +189,8 @@ def _return_type_reflexive(meth):
     return _return_type_closure
 
 
+op: Callable
+
 for op, (meth, rmeth) in _reflexive_operators.items():
     (
         register_property(
@@ -207,7 +210,7 @@ for op, (meth, rmeth) in _reflexive_operators.items():
         register_property(T, rmeth, "return_type", _return_type_reflexive(rmeth))
 
 
-_unary_operators = {
+_unary_operators: dict[Callable, str] = {
     operator.abs: "__abs__",
     operator.pos: "__pos__",
     operator.neg: "__neg__",

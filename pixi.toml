@@ -11,7 +11,6 @@ compile = "python -c 'import finch'"
 
 [dependencies]
 python = ">=3.10,<3.13"
-juliaup = ">=1.17.10,<2"
 
 [pypi-dependencies]
 finch-tensor-lite = { path = ".", editable = true }
@@ -24,9 +23,11 @@ sparse = "*"
 numba = ">=0.60"
 scipy = "*"
 numpy = "==2.*"
+mypy = "==1.15.*"
 
 [feature.test.tasks]
 test = { cmd = "pytest", depends-on = ["compile"] }
+type-check = { cmd = "mypy ." }
 
 [environments]
 test = ["test"]

@@ -2,9 +2,8 @@ import os
 import shutil
 import sys
 import sysconfig
-import tomllib
+from importlib.metadata import version
 from pathlib import Path
-
 import donfig
 
 """
@@ -57,6 +56,5 @@ def get_version():
     """
     Get the version of Finch.
     """
-    from importlib.metadata import version
 
     return version("finch-tensor-lite")

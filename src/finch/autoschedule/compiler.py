@@ -1,7 +1,6 @@
-from collections.abc import Hashable
 from textwrap import dedent
-from typing import Any
 
+from ..algebra import fill_value
 from ..finch_logic import (
     Alias,
     Deferred,
@@ -16,13 +15,13 @@ from ..finch_logic import (
     Subquery,
     Table,
 )
+from ._utils import intersect, with_subsequence
 
 
-def get_or_insert(dictionary: dict[Hashable, Any], key: Hashable, default: Any) -> Any:
-    if key in dictionary:
-        return dictionary[key]
-    dictionary[key] = default
-    return default
+def get_or_insert(
+    dictionary: dict[str, LogicNode], key: str, default: LogicNode
+) -> LogicNode:
+    return dictionary.setdefault(key, default)
 
 
 def get_structure(
@@ -40,13 +39,15 @@ def get_structure(
                 get_structure(lhs, fields, aliases), get_structure(arg, fields, aliases)
             )
         case Table(tns, idxs):
+            assert isinstance(tns, Immediate), "tns must be an Immediate"
             return Table(
                 Immediate(type(tns.val)),
                 tuple(get_structure(idx, fields, aliases) for idx in idxs),
             )
-        case any if any.is_tree():
-            return any.from_arguments(
-                *[get_structure(arg, fields, aliases) for arg in any.get_arguments()]
+        case any if any.is_expr():
+            return any.make_term(
+                any.head(),
+                *[get_structure(arg, fields, aliases) for arg in any.children()],
             )
         case _:
             return node
@@ -90,18 +91,6 @@ def compile_logic_constant(ex: LogicNode) -> str:
             raise Exception(f"Invalid constant: {ex}")
 
 
-def intersect(x1: tuple, x2: tuple) -> tuple:
-    return tuple(x for x in x1 if x in x2)
-
-
-def with_subsequence(x1: tuple, x2: tuple) -> tuple:
-    res = list(x2)
-    indices = [idx for idx, val in enumerate(x2) if val in x1]
-    for idx, i in enumerate(indices):
-        res[i] = x1[idx]
-    return tuple(res)
-
-
 class LogicLowerer:
     def __init__(self, mode: str = "fast"):
         self.mode = mode
@@ -134,7 +123,7 @@ class LogicLowerer:
                     quote
                         {lhs.name} = {compile_logic_constant(tns)}
                         @finch mode = {self.mode} begin
-                            {lhs.name} .= {tns.fill_value}
+                            {lhs.name} .= {fill_value(tns)}
                             {body}
                             return {lhs.name}
                         end
