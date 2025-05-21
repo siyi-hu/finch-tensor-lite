@@ -170,8 +170,8 @@ class Table(LogicNode):
         idxs: The fields indexing the tensor.
     """
 
-    tns: LogicNode
-    idxs: tuple[LogicNode]
+    tns: Immediate
+    idxs: tuple[LogicNode, ...]
 
     @staticmethod
     def is_expr():
@@ -210,7 +210,7 @@ class MapJoin(LogicNode):
     """
 
     op: LogicNode
-    args: tuple[LogicNode]
+    args: tuple[LogicNode, ...]
 
     @staticmethod
     def is_expr():
@@ -255,7 +255,7 @@ class Aggregate(LogicNode):
     op: LogicNode
     init: LogicNode
     arg: LogicNode
-    idxs: tuple[LogicNode]
+    idxs: tuple[LogicNode, ...]
 
     @staticmethod
     def is_expr():
@@ -293,7 +293,7 @@ class Reorder(LogicNode):
     """
 
     arg: LogicNode
-    idxs: tuple[LogicNode]
+    idxs: tuple[Field, ...]
 
     @staticmethod
     def is_expr():
@@ -330,7 +330,7 @@ class Relabel(LogicNode):
     """
 
     arg: LogicNode
-    idxs: tuple[LogicNode]
+    idxs: tuple[LogicNode, ...]
 
     @staticmethod
     def is_expr():
@@ -455,7 +455,7 @@ class Produces(LogicNode):
         args: The arguments to return.
     """
 
-    args: tuple[LogicNode]
+    args: tuple[LogicNode, ...]
 
     @staticmethod
     def is_expr():
@@ -486,7 +486,7 @@ class Plan(LogicNode):
         bodies: The sequence of statements to execute.
     """
 
-    bodies: tuple[LogicNode] = ()
+    bodies: tuple[LogicNode, ...] = ()
 
     @staticmethod
     def is_expr():

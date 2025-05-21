@@ -1,7 +1,6 @@
-from collections.abc import Hashable
 from textwrap import dedent
-from typing import Any
 
+from ..algebra import fill_value
 from ..finch_logic import (
     Alias,
     Deferred,
@@ -18,11 +17,10 @@ from ..finch_logic import (
 )
 
 
-def get_or_insert(dictionary: dict[Hashable, Any], key: Hashable, default: Any) -> Any:
-    if key in dictionary:
-        return dictionary[key]
-    dictionary[key] = default
-    return default
+def get_or_insert(
+    dictionary: dict[str, LogicNode], key: str, default: LogicNode
+) -> LogicNode:
+    return dictionary.setdefault(key, default)
 
 
 def get_structure(
@@ -44,9 +42,10 @@ def get_structure(
                 Immediate(type(tns.val)),
                 tuple(get_structure(idx, fields, aliases) for idx in idxs),
             )
-        case any if any.is_tree():
-            return any.from_arguments(
-                *[get_structure(arg, fields, aliases) for arg in any.get_arguments()]
+        case any if any.is_expr():
+            return any.make_term(
+                any.head(),
+                *[get_structure(arg, fields, aliases) for arg in any.children()],
             )
         case _:
             return node
@@ -134,7 +133,7 @@ class LogicLowerer:
                     quote
                         {lhs.name} = {compile_logic_constant(tns)}
                         @finch mode = {self.mode} begin
-                            {lhs.name} .= {tns.fill_value}
+                            {lhs.name} .= {fill_value(tns)}
                             {body}
                             return {lhs.name}
                         end

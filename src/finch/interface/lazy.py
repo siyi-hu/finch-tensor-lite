@@ -88,7 +88,7 @@ def defer(arr) -> LazyTensor:
     if isinstance(arr, LazyTensor):
         return arr
     name = Alias(gensym("A"))
-    idxs = [Field(gensym("i")) for _ in range(arr.ndim)]
+    idxs = tuple(Field(gensym("i")) for _ in range(arr.ndim))
     shape = tuple(arr.shape)
     tns = Subquery(name, Table(Immediate(arr), idxs))
     return LazyTensor(tns, shape, fill_value(arr), element_type(arr))
@@ -114,10 +114,10 @@ def permute_dims(arg, /, axis: tuple[int, ...]) -> LazyTensor:
     """
     arg = defer(arg)
     axis = normalize_axis_tuple(axis, arg.ndim + len(axis))
-    idxs = [Field(gensym("i")) for _ in range(arg.ndim)]
+    idxs = tuple(Field(gensym("i")) for _ in range(arg.ndim))
     return LazyTensor(
-        Reorder(Relabel(arg.data, idxs), [idxs[i] for i in axis]),
-        [arg.shape[i] for i in axis],
+        Reorder(Relabel(arg.data, idxs), tuple(idxs[i] for i in axis)),
+        tuple(arg.shape[i] for i in axis),
         arg.fill_value,
         arg.element_type,
     )
@@ -159,17 +159,18 @@ def expand_dims(
     if isinstance(axis, int):
         axis = (axis,)
     axis = normalize_axis_tuple(axis, x.ndim + len(axis))
+    assert not isinstance(axis, int)
     assert len(axis) == len(set(axis)), "axis must be unique"
     assert set(axis).issubset(range(x.ndim + len(axis))), "Invalid axis"
     offset = [0] * (x.ndim + len(axis))
     for d in axis:
         offset[d] = 1
     offset = list(accumulate(offset))
-    idxs_1 = [Field(gensym("i")) for _ in range(x.ndim)]
-    idxs_2 = [
+    idxs_1 = tuple(Field(gensym("i")) for _ in range(x.ndim))
+    idxs_2 = tuple(
         Field(gensym("i")) if n in axis else idxs_1[n - offset[n]]
         for n in range(x.ndim + len(axis))
-    ]
+    )
     data_2 = Reorder(Relabel(x.data, idxs_1), idxs_2)
     shape_2 = tuple(
         1 if n in axis else x.shape[n - offset[n]] for n in range(x.ndim + len(axis))
@@ -207,12 +208,13 @@ def squeeze(
     if isinstance(axis, int):
         axis = (axis,)
     axis = normalize_axis_tuple(axis, x.ndim)
+    assert not isinstance(axis, int)
     assert len(axis) == len(set(axis)), "axis must be unique"
     assert set(axis).issubset(range(x.ndim)), "Invalid axis"
     assert all(x.shape[d] == 1 for d in axis), "axis to drop must have size 1"
     newaxis = [n for n in range(x.ndim) if n not in axis]
-    idxs_1 = [Field(gensym("i")) for _ in range(x.ndim)]
-    idxs_2 = [idxs_1[n] for n in newaxis]
+    idxs_1 = tuple(Field(gensym("i")) for _ in range(x.ndim))
+    idxs_2 = tuple(idxs_1[n] for n in newaxis)
     data_2 = Reorder(Relabel(x.data, idxs_1), idxs_2)
     shape_2 = tuple(x.shape[n] for n in newaxis)
     return LazyTensor(data_2, shape_2, x.fill_value, x.element_type)
@@ -271,18 +273,21 @@ def reduce(
     if axis is None:
         axis = tuple(range(x.ndim))
     axis = normalize_axis_tuple(axis, x.ndim)
+    assert axis is not None and not isinstance(axis, int)
     shape = tuple(x.shape[n] for n in range(x.ndim) if n not in axis)
-    fields = [Field(gensym("i")) for _ in range(x.ndim)]
-    data = Aggregate(
+    fields = tuple(Field(gensym("i")) for _ in range(x.ndim))
+    data: LogicNode = Aggregate(
         Immediate(op),
         Immediate(init),
         Relabel(x.data, fields),
-        [fields[i] for i in axis],
+        tuple(fields[i] for i in axis),
     )
     if keepdims:
-        keeps = [fields[i] if i in axis else Field(gensym("j")) for i in range(x.ndim)]
+        keeps = tuple(
+            fields[i] if i in axis else Field(gensym("j")) for i in range(x.ndim)
+        )
         data = Reorder(data, keeps)
-        shape = [shape[i] if i in axis else 1 for i in range(x.ndim)]
+        shape = tuple(shape[i] if i in axis else 1 for i in range(x.ndim))
     if dtype is None:
         dtype = fixpoint_type(op, init, x.element_type)
     return LazyTensor(identify(data), shape, init, dtype)
@@ -311,7 +316,7 @@ def elementwise(f: Callable, *args) -> LazyTensor:
     the input tensors.  After broadcasting the arguments to the same shape, for
     each index `i`, `out[*i] = f(args[0][*i], args[1][*i], ...)`.
     """
-    args = list(map(defer, args))
+    args = tuple(defer(a) for a in args)
     ndim = builtins.max([arg.ndim for arg in args])
     shape = tuple(
         builtins.max(

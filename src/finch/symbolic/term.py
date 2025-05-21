@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
-from typing import Any
+from typing import Any, Self
 
 """
 This module contains definitions for common functions that are useful for symbolic
@@ -34,7 +34,7 @@ class Term(ABC):
         """
 
     @abstractmethod
-    def make_term(self, head: Any, children: list["Term"]) -> "Term":
+    def make_term(self, head: Any, *children: "Term") -> Self:
         """
         Construct a new term in the same family of terms with the given head type and
         children. This function should satisfy
@@ -49,8 +49,10 @@ class Term(ABC):
             )
         return self._hashcache
 
-    def __eq__(self, other: "Term") -> bool:
-        self.head() == other.head() and self.children() == other.children()
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Term):
+            return NotImplemented
+        return self.head() == other.head() and self.children() == other.children()
 
 
 def PostOrderDFS(node: Term) -> Iterator[Term]:
