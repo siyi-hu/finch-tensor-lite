@@ -44,9 +44,6 @@ jobs:
       - name: Install package
         run: |
           poetry install --with test
-      - name: Run type-checking
-        run: |
-          poetry run mypy .
       - uses: codecov/codecov-action@v5
 
 on:

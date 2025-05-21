@@ -58,7 +58,7 @@ On successful execution, the action publishes the package to PyPI and tags the r
 
 ### Pre-commit hooks
 
-Pull requests must pass some formatting, linting, and typing checks before we can merge them. These checks can be run automatically before you make commits, which is why they are sometimes called "pre-commit hooks". We use [pre-commit](https://pre-commit.com/) to run these checks. 
+Pull requests must pass some formatting, linting, and typing checks before we can merge them. These checks can be run automatically before you make commits, which is why they are sometimes called "pre-commit hooks". We use [pre-commit](https://pre-commit.com/) to run these checks.
 
 To install pre-commit hooks to run before committing, run:
 ```bash
