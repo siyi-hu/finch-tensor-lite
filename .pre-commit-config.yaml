@@ -19,5 +19,17 @@ repos:
       args: [--config=pyproject.toml]
       types_or: [ python, pyi, jupyter ]
 
+- repo: local
+  hooks:
+    - id: mypy
+      language: script
+      name: mypy
+      entry: /usr/bin/env poetry run mypy
+      args:
+        - --non-interactive
+        - --install-types
+        - --config-file=pyproject.toml
+      files: ^src/.*.py$
+
 ci:
     autofix_prs: false

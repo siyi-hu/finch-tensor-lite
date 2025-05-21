@@ -98,7 +98,7 @@ def register_property(cls, attr, prop, f):
     _properties[(cls, attr, prop)] = f
 
 
-def fill_value(arg: Any) -> StableNumber:
+def fill_value(arg: Any) -> Any:
     """The fill value for the given argument.  The fill value is the
     default value for a tensor when it is created with a given shape and dtype,
     as well as the background value for sparse tensors.

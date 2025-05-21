@@ -38,9 +38,7 @@ def isolate_aggregates(root: LogicNode) -> LogicNode:
                 name = Alias(gensym("A"))
                 return Subquery(name, agg)
 
-    ret = PostWalk(rule_0)(root)
-    assert ret is not None
-    return ret
+    return Rewrite(PostWalk(rule_0))(root)
 
 
 def isolate_reformats(root: LogicNode) -> LogicNode:
@@ -50,9 +48,7 @@ def isolate_reformats(root: LogicNode) -> LogicNode:
                 name = Alias(gensym("A"))
                 return Subquery(name, ref)
 
-    ret = PostWalk(rule_0)(root)
-    assert ret is not None
-    return ret
+    return Rewrite(PostWalk(rule_0))(root)
 
 
 def isolate_tables(root: LogicNode) -> LogicNode:
@@ -62,9 +58,7 @@ def isolate_tables(root: LogicNode) -> LogicNode:
                 name = Alias(gensym("A"))
                 return Subquery(name, tbl)
 
-    ret = PostWalk(rule_0)(root)
-    assert ret is not None
-    return ret
+    return Rewrite(PostWalk(rule_0))(root)
 
 
 def pretty_labels(root: LogicNode) -> LogicNode:

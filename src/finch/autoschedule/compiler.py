@@ -39,6 +39,7 @@ def get_structure(
                 get_structure(lhs, fields, aliases), get_structure(arg, fields, aliases)
             )
         case Table(tns, idxs):
+            assert isinstance(tns, Immediate), "tns must be an Immediate"
             return Table(
                 Immediate(type(tns.val)),
                 tuple(get_structure(idx, fields, aliases) for idx in idxs),

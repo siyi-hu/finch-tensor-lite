@@ -170,7 +170,7 @@ class Table(LogicNode):
         idxs: The fields indexing the tensor.
     """
 
-    tns: Immediate
+    tns: LogicNode
     idxs: tuple[LogicNode, ...]
 
     @staticmethod
