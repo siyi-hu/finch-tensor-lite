@@ -57,14 +57,6 @@ def get_version():
     """
     Get the version of Finch.
     """
-    pyproject_path = Path(__file__).parent.parent.parent.parent / "pyproject.toml"
-    if not pyproject_path.exists():
-        raise FileNotFoundError("pyproject.toml not found.")
+    from importlib.metadata import version
 
-    with pyproject_path.open("rb") as f:
-        pyproject_data = tomllib.load(f)
-
-    try:
-        return pyproject_data["project"]["version"]
-    except KeyError:
-        raise ValueError("Version not found in pyproject.toml.") from None
+    return version("finch-tensor-lite")
