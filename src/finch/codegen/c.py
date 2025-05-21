@@ -6,11 +6,11 @@ from functools import lru_cache
 from operator import methodcaller
 from pathlib import Path
 
+from ..util import config
 from ..util.cache import file_cache
-from ..util.config import get_config
 
 
-@file_cache(ext=get_config("FINCH_SHLIB_SUFFIX"), domain="c")
+@file_cache(ext=config.get("shared_library_suffix"), domain="c")
 def create_shared_lib(filename, c_code, cc, cflags):
     """
     Compiles a C function into a shared library and returns the path.
@@ -18,7 +18,7 @@ def create_shared_lib(filename, c_code, cc, cflags):
     :param c_code: The C code as a string.
     :return: The result of the function call.
     """
-    tmp_dir = Path(get_config("FINCH_TMP"))
+    tmp_dir = Path(config.get("data_path")) / "tmp"
     tmp_dir.mkdir(parents=True, exist_ok=True)
     # Create a temporary directory to store the C file and shared library
     with tempfile.TemporaryDirectory(prefix=str(tmp_dir)) as staging_dir:
@@ -52,7 +52,9 @@ def get_c_function(function_name, c_code):
     :param c_code: The code to compile
     """
     shared_lib_path = create_shared_lib(
-        c_code, get_config("FINCH_CC"), get_config("FINCH_CFLAGS")
+        c_code,
+        config.get("cc"),
+        [*config.get("cflags").split(), *config.get("shared_cflags").split()],
     )
 
     # Load the shared library using ctypes

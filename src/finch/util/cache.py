@@ -6,7 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 from uuid import UUID
 
-from .config import get_config, get_version
+from .config import config, get_version
 
 finch_uuid = UUID("ef66f312-ff6e-4b8a-bb8c-9a843f3ecdf4")
 
@@ -27,11 +27,13 @@ def file_cache(*, ext: str, domain: str) -> Callable:
         nonlocal domain
         nonlocal ext
         ext = ext.lstrip(".")
-        if get_config("FINCH_CACHE_ENABLE"):
-            cache_dir = Path(get_config("FINCH_CACHE_PATH")) / get_version() / domain
+        if config.get("cache_enable"):
+            cache_dir = Path(config.get("data_path")) / "cache" / get_version() / domain
         else:
             cache_dir = Path(
-                tempfile.mkdtemp(prefix=str(Path(get_config("FINCH_TMP")) / domain))
+                tempfile.mkdtemp(
+                    prefix=str(Path(config.get("data_path")) / "tmp" / domain)
+                )
             )
             atexit.register(
                 lambda: shutil.rmtree(cache_dir) if cache_dir.exists() else None
@@ -42,7 +44,7 @@ def file_cache(*, ext: str, domain: str) -> Callable:
         def inner(*args):
             id = uuid.uuid5(finch_uuid, str((f.__name__, f.__module__, args)))
             filename = cache_dir / f"{f.__name__}_{id}.{ext}"
-            if not get_config("FINCH_CACHE_ENABLE") or not filename.exists():
+            if not config.get("cache_enable") or not filename.exists():
                 f(str(filename), *args)
             return filename
 
