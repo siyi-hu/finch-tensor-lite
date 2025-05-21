@@ -41,10 +41,7 @@ def file_cache(*, ext: str, domain: str) -> Callable:
 
         def inner(*args):
             id = uuid.uuid5(finch_uuid, str((f.__name__, f.__module__, args)))
-            filename = (
-                cache_dir
-                / f"{f.__name__}_{id}.{ext}"
-            )
+            filename = cache_dir / f"{f.__name__}_{id}.{ext}"
             if not get_config("FINCH_CACHE_ENABLE") or not filename.exists():
                 f(str(filename), *args)
             return filename
