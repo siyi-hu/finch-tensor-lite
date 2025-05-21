@@ -4,7 +4,7 @@ import sys
 import sysconfig
 from importlib.metadata import version
 from pathlib import Path
-import donfig
+import donfig  # type: ignore
 
 """
 Finch Configuration Module
@@ -31,21 +31,14 @@ default = {
     "data_path": str(Path(sysconfig.get_path("data")) / "finch"),
     "cache_size": 10_000,
     "cache_enable": True,
-    "cc": (
-        os.getenv("CC")
-        or sysconfig.get_config_var("CC")
-        or str(shutil.which("gcc") or "cl" if is_windows else "cc")
+    "cc": str(os.getenv("CC") or shutil.which("gcc") or ("cl" if is_windows else "cc")),
+    "cflags": os.getenv("CFLAGS") or "-O3",
+    "shared_cflags": os.getenv(
+        "SHARED_CFLAGS",
+        "-shared -fPIC",
     ),
-    "cflags": os.getenv(
-        "CFLAGS",
-        [
-            "-shared",
-            "-fPIC",
-            "-O3",
-        ],
-    ),
-    "shlib_suffix": (
-        sysconfig.get_config_var("SHLIB_SUFFIX") or (".dll" if is_windows else ".so")
+    "shared_library_suffix": (
+        os.getenv("SHARED_LIBRARY_SUFFIX", (".dll" if is_windows else ".so"))
     ),
 }
 

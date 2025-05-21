@@ -10,7 +10,7 @@ from ..util import config
 from ..util.cache import file_cache
 
 
-@file_cache(ext=config.get("shlib_suffix"), domain="c")
+@file_cache(ext=config.get("shared_library_suffix"), domain="c")
 def create_shared_lib(filename, c_code, cc, cflags):
     """
     Compiles a C function into a shared library and returns the path.
@@ -51,7 +51,11 @@ def get_c_function(function_name, c_code):
     :param function_name: The name of the function to call.
     :param c_code: The code to compile
     """
-    shared_lib_path = create_shared_lib(c_code, config.get("cc"), config.get("cflags"))
+    shared_lib_path = create_shared_lib(
+        c_code,
+        config.get("cc"),
+        [*config.get("cflags").split(), *config.get("shared_cflags").split()],
+    )
 
     # Load the shared library using ctypes
     shared_lib = ctypes.CDLL(str(shared_lib_path))
