@@ -23,7 +23,7 @@ We adhere to the (Python Code of Conduct)[https://policies.python.org/python.org
 
 For those who are new to the process of contributing code, welcome! We value your contribution, and are excited to work with you. GitHub's [pull request guide](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request) will walk you through how to file a PR.
 
-Please follow the (SciML Collaborative Practices)[https://docs.sciml.ai/ColPrac/stable/] and (Github Collaborative Practices)[https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/getting-started/helping-others-review-your-changes] guides to help make your PR easier to review.
+Please follow the [SciML Collaborative Practices](https://docs.sciml.ai/ColPrac/stable/) and [Github Collaborative Practices](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/getting-started/helping-others-review-your-changes) guides to help make your PR easier to review.
 
 ### Packaging
 
