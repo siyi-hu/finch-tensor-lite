@@ -17,7 +17,7 @@ pip install finch-tensor-lite
 
 ### Code Of Conduct
 
-We adhere to the (Python Code of Conduct)[https://policies.python.org/python.org/code-of-conduct/]
+We adhere to the [Python Code of Conduct](https://policies.python.org/python.org/code-of-conduct/)
 
 ### Collaboration Practices
 
