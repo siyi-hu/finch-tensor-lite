@@ -70,19 +70,20 @@ def query_property(obj: type | Hashable, attr: str, prop: str, *args) -> Any:
     Raises:
         NotImplementedError: If the property is not implemented for the given type.
     """
-    T: type | Hashable
-    if isinstance(obj, type):
-        T = obj
-    else:
-        if isinstance(obj, Hashable) and (obj, attr, prop) in _properties:
-            return _properties[(obj, attr, prop)](obj, *args)
+    if not isinstance(obj, type):
+        if isinstance(obj, Hashable):
+            query_fn = _properties.get((obj, attr, prop))
+            if query_fn is not None:
+                return query_fn(obj, *args)
         T = type(obj)
-    while True:
-        if (T, attr, prop) in _properties:
-            return _properties[(T, attr, prop)](obj, *args)
-        if T.__base__ is None:
-            break
-        T = T.__base__
+    else:
+        T = obj
+
+    for Ti in T.__mro__:
+        query_fn = _properties.get((Ti, attr, prop))
+        if query_fn is not None:
+            return query_fn(obj, *args)
+
     raise NotImplementedError(f"Property {prop} not implemented for {obj}")
 
 
