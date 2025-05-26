@@ -20,6 +20,10 @@ from .interface import (
     squeeze,
     subtract,
     sum,
+    min,
+    max,
+    # any,
+    # all,
 )
 
 __all__ = [
@@ -46,4 +50,8 @@ __all__ = [
     "element_type",
     "get_c_function",
     "CKernel",
+    "min",
+    "max",
+    # "any",
+    # "all",
 ]

@@ -148,3 +148,51 @@ def negative(x):
     if isinstance(x, lazy.LazyTensor):
         return lazy.negative(x)
     return compute(lazy.negative(x))
+
+
+# def any(
+#     x,
+#     /,
+#     *,
+#     axis: int | tuple[int, ...] | None = None,
+#     keepdims: bool = False
+# ):
+#     if isinstance(x, lazy.LazyTensor):
+#         return lazy.any(x, axis=axis, keepdims=keepdims)
+#     return compute(lazy.any(x, axis=axis, keepdims=keepdims))
+
+
+# def all(
+#     x,
+#     /,
+#     *,
+#     axis: int | tuple[int, ...] | None = None,
+#     keepdims: bool = False
+# ):
+#     if isinstance(x, lazy.LazyTensor):
+#         return lazy.all(x, axis=axis, keepdims=keepdims)
+#     return compute(lazy.all(x, axis=axis, keepdims=keepdims))
+
+
+def min(
+    x,
+    /,
+    *,
+    axis: int | tuple[int, ...] | None = None,
+    keepdims: bool = False
+):
+    if isinstance(x, lazy.LazyTensor):
+        return lazy.min(x, axis=axis, keepdims=keepdims)
+    return compute(lazy.min(x, axis=axis, keepdims=keepdims))
+
+
+def max(
+    x,
+    /,
+    *,
+    axis: int | tuple[int, ...] | None = None,
+    keepdims: bool = False
+):
+    if isinstance(x, lazy.LazyTensor):
+        return lazy.max(x, axis=axis, keepdims=keepdims)
+    return compute(lazy.max(x, axis=axis, keepdims=keepdims))

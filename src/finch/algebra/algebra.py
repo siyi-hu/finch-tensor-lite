@@ -48,6 +48,7 @@ from collections.abc import Callable, Hashable
 from typing import Any
 
 import numpy as np
+import math
 
 _properties: dict[tuple[type | Hashable, str, str], Any] = {}
 
@@ -209,6 +210,12 @@ for op, (meth, rmeth) in _reflexive_operators.items():
         register_property(T, meth, "return_type", _return_type_reflexive(meth))
         register_property(T, rmeth, "return_type", _return_type_reflexive(rmeth))
 
+register_property(min, '__call__', 'return_type', 
+                lambda op, a, b: query_property(a, "__add__", "return_type", b))
+register_property(max, '__call__', 'return_type', 
+                lambda op, a, b: query_property(a, "__add__", "return_type", b))
+# register_property(any, '__call__', 'return_type', lambda op, a, b: bool)
+# register_property(all, '__call__', 'return_type', lambda op, a, b: bool)
 
 _unary_operators: dict[Callable, str] = {
     operator.abs: "__abs__",
@@ -308,3 +315,34 @@ for T in StableNumber.__args__:
     register_property(T, "__and__", "init_value", lambda a, b: a(True))
     register_property(T, "__xor__", "init_value", lambda a, b: a(False))
     register_property(T, "__or__", "init_value", lambda a, b: a(False))
+
+def _any_init(arg):
+    return True
+
+def _all_init(arg):
+    return False
+
+def _min_init(arg):
+    dtype = np.dtype(arg) if isinstance(arg, np.ndarray) else np.dtype(arg)
+    if np.issubdtype(dtype, np.floating):
+        return math.inf
+    if np.issubdtype(dtype, np.integer):
+        return np.iinfo(dtype).max
+    if np.issubdtype(dtype, np.bool_):
+        return True
+    raise TypeError("Unsupported dtype for min")
+
+def _max_init(arg):
+    dtype = np.dtype(arg) if isinstance(arg, np.ndarray) else np.dtype(arg)
+    if np.issubdtype(dtype, np.floating):
+        return -math.inf
+    if np.issubdtype(dtype, np.integer):
+        return np.iinfo(dtype).min
+    if np.issubdtype(dtype, np.bool_):
+        return False
+    raise TypeError("Unsupported dtype for max")
+
+register_property(min, '__call__', 'init_value', lambda op, arg: _min_init(element_type(arg)))
+register_property(max, '__call__', 'init_value', lambda op, arg: _max_init(element_type(arg)))
+# register_property(any, '__call__', 'init_value', lambda op, arg: _any_init(arg))
+# register_property(all,  '__call__', 'init_value', lambda op, arg: _all_init(arg))

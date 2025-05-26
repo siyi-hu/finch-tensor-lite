@@ -13,6 +13,10 @@ from .eager import (
     squeeze,
     subtract,
     sum,
+    min,
+    max,
+    # any,
+    # all,
 )
 
 # from .tensor import *
@@ -37,6 +41,10 @@ __all__ = [
     "abs",
     "positive",
     "negative",
+    "min",
+    "max",
+    # "any",
+    # "all",
     "AbstractEagerTensor",
     "LazyTensor",
 ]
