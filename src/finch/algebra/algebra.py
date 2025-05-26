@@ -164,12 +164,6 @@ def return_type(op: Any, *args: Any) -> Any:
     return query_property(op, "__call__", "return_type", *args)
 
 
-def logical_and(a, b):
-    return operator.truth(a) and operator.truth(b)
-
-def logical_or(a, b):
-    return operator.truth(a) or operator.truth(b)
-
 _reflexive_operators = {
     operator.add: ("__add__", "__radd__"),
     operator.sub: ("__sub__", "__rsub__"),
@@ -185,10 +179,6 @@ _reflexive_operators = {
     operator.and_: ("__and__", "__rand__"),
     operator.xor: ("__xor__", "__rxor__"),
     operator.or_: ("__or__", "__ror__"),
-    logical_and: ("__any__", "__rany__"),
-    logical_or: ("__all__", "__rall__"),
-    min: ("__min__", "__rmin__"),
-    max: ("__max__", "__rmax__"),
 }
 
 
@@ -353,7 +343,11 @@ def _max_init(arg):
         return False
     raise TypeError("Unsupported dtype for max")
 
-register_property(min, '__call__', 'init_value', lambda op, arg: _min_init(element_type(arg)))
-register_property(max, '__call__', 'init_value', lambda op, arg: _max_init(element_type(arg)))
-# register_property(any, '__call__', 'init_value', lambda op, arg: _any_init(arg))
-# register_property(all,  '__call__', 'init_value', lambda op, arg: _all_init(arg))
+register_property(min, '__call__', 'init_value', 
+                  lambda op, arg: _min_init(element_type(arg)))
+register_property(max, '__call__', 'init_value', 
+                  lambda op, arg: _max_init(element_type(arg)))
+# register_property(any, '__call__', 'init_value', 
+#                   lambda op, arg: _any_init(arg))
+# register_property(all,  '__call__', 'init_value', 
+#                   lambda op, arg: _all_init(arg))

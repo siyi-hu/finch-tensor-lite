@@ -19,18 +19,13 @@ def output_term(args):
     ],
 )
 def test_lazyTensor_prod(a):
-    output_term("")
-    output_term("***** prod *****")
-
-    result = finch.prod(a, axis=0); output_term(result)
-    expected = np.prod(a, axis=0); output_term(expected)
+    result = finch.prod(a, axis=0)
+    expected = np.prod(a, axis=0)
     assert_equal(result, expected)
-    output_term("")
 
-    result = finch.prod(a, axis=1); output_term(result)
-    expected = np.prod(a, axis=1); output_term(expected)
+    result = finch.prod(a, axis=1)
+    expected = np.prod(a, axis=1)
     assert_equal(result, expected)
-    output_term("")
 
 
 @pytest.mark.parametrize(
@@ -42,13 +37,13 @@ def test_lazyTensor_prod(a):
 def test_lazyTensor_sum(a):
     output_term("***** sum *****")
 
-    result = finch.sum(a, axis=0); output_term(result)
-    expected = np.sum(a, axis=0); output_term(expected)
+    result = finch.sum(a, axis=0)
+    expected = np.sum(a, axis=0)
     assert_equal(result, expected)
     output_term("")
 
-    result = finch.sum(a, axis=1); output_term(result)
-    expected = np.sum(a, axis=1); output_term(expected)
+    result = finch.sum(a, axis=1)
+    expected = np.sum(a, axis=1)
     assert_equal(result, expected)
     output_term("")
 
@@ -64,13 +59,11 @@ def test_lazyTensor_sum(a):
 # def test_lazyTensor_any(a):
 #     output_term("***** any *****")
 
-#     # result = np.asarray(finch.compute(finch.any(finch.lazy(a), axis=0)), dtype=bool); output_term(result)
 #     result = finch.any(a, axis=0); output_term(result)
 #     expected = np.any(a, axis=0); output_term(expected)
 #     assert_equal(result, expected)
 #     output_term("")
 
-#     # result = np.asarray(finch.compute(finch.any(finch.lazy(a), axis=1)), dtype=bool); output_term(result)
 #     result = finch.any(a, axis=1); output_term(result)
 #     expected = np.any(a, axis=1); output_term(expected)
 #     assert_equal(result, expected)
@@ -109,15 +102,13 @@ def test_lazyTensor_sum(a):
 def test_lazyTensor_min(a):
     output_term("***** min *****")
 
-    result = finch.min(a, axis=0); output_term(result)
-    expected = np.min(a, axis=0); output_term(expected)
+    result = finch.min(a, axis=0)
+    expected = np.min(a, axis=0)
     assert_equal(result, expected)
-    output_term("")
 
-    result = finch.min(a, axis=1); output_term(result)
-    expected = np.min(a, axis=1); output_term(expected)
+    result = finch.min(a, axis=1)
+    expected = np.min(a, axis=1)
     assert_equal(result, expected)
-    output_term("")
 
 
 @pytest.mark.parametrize(
@@ -132,12 +123,10 @@ def test_lazyTensor_min(a):
 def test_lazyTensor_max(a):
     output_term("***** max *****")
 
-    result = finch.max(a, axis=0); output_term(result)
-    expected = np.max(a, axis=0); output_term(expected)
+    result = finch.max(a, axis=0)
+    expected = np.max(a, axis=0)
     assert_equal(result, expected)
-    output_term("")
 
-    result = finch.max(a, axis=1); output_term(result)
-    expected = np.max(a, axis=1); output_term(expected)
+    result = finch.max(a, axis=1)
+    expected = np.max(a, axis=1)
     assert_equal(result, expected)
-    output_term("")
