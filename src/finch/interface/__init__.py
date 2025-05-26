@@ -4,6 +4,8 @@ from .eager import (
     add,
     elementwise,
     expand_dims,
+    max,
+    min,
     multiply,
     negative,
     permute_dims,
@@ -13,10 +15,6 @@ from .eager import (
     squeeze,
     subtract,
     sum,
-    min,
-    max,
-    # any,
-    # all,
 )
 
 # from .tensor import *
@@ -43,8 +41,6 @@ __all__ = [
     "negative",
     "min",
     "max",
-    # "any",
-    # "all",
     "AbstractEagerTensor",
     "LazyTensor",
 ]

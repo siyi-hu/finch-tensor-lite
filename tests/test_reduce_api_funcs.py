@@ -1,16 +1,21 @@
+import pytest
+
 import numpy as np
 from numpy.testing import assert_equal
-import pytest
+
 import finch
 
 verbose = False
 # verbose = True
 
+
 def output_term(args):
     if verbose:
         print(args)
 
+
 # TODO: (Overall) 3-D or higher dimension tensor testcases
+
 
 @pytest.mark.parametrize(
     "a",
@@ -95,7 +100,7 @@ def test_lazyTensor_sum(a):
     [
         (np.array([[100, 14, 9, 78], [44, 3, 5, 10]])),
         (np.array([[0, 0.618, 0, 0.001], [0, 0.01, 0, 0]])),
-        (np.array([[10000.0, 1.0, 89., 78], [401., 3, 5, 10.2]])),
+        (np.array([[10000.0, 1.0, 89.0, 78], [401.0, 3, 5, 10.2]])),
         (np.array([[True, False, True, False], [False, False, False, False]])),
     ],
 )
@@ -116,7 +121,7 @@ def test_lazyTensor_min(a):
     [
         (np.array([[100, 14, 9, 78], [44, 3, 5, 10]])),
         (np.array([[0, 0.618, 0, 0.001], [0, 0.01, 0, 0]])),
-        (np.array([[10000.0, 1.0, 89., 78], [401., 3, 5, 10.2]])),
+        (np.array([[10000.0, 1.0, 89.0, 78], [401.0, 3, 5, 10.2]])),
         (np.array([[True, False, True, False], [False, False, False, False]])),
     ],
 )

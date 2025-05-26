@@ -9,7 +9,6 @@ from typing import Any
 from numpy.core.numeric import normalize_axis_tuple
 
 from ..algebra import element_type, fill_value, fixpoint_type, init_value, return_type
-
 from ..finch_logic import (
     Aggregate,
     Alias,
@@ -434,7 +433,7 @@ def min(
     *,
     axis: int | tuple[int, ...] | None = None,
     keepdims: bool = False,
-    init = None
+    init=None,
 ):
     """
     Return the minimum of input array ``arr`` along given axis.
@@ -450,7 +449,7 @@ def max(
     *,
     axis: int | tuple[int, ...] | None = None,
     keepdims: bool = False,
-    init = None
+    init=None,
 ):
     """
     Return the maximum of input array ``arr`` along given axis.

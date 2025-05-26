@@ -11,6 +11,8 @@ from .interface import (
     expand_dims,
     fuse,
     fused,
+    max,
+    min,
     multiply,
     negative,
     permute_dims,
@@ -20,10 +22,6 @@ from .interface import (
     squeeze,
     subtract,
     sum,
-    min,
-    max,
-    # any,
-    # all,
 )
 
 __all__ = [
@@ -52,6 +50,4 @@ __all__ = [
     "CKernel",
     "min",
     "max",
-    # "any",
-    # "all",
 ]
