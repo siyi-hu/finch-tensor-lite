@@ -2,6 +2,8 @@ from .eager import (
     AbstractEagerTensor,
     abs,
     add,
+    all,
+    any,
     elementwise,
     expand_dims,
     max,
@@ -43,4 +45,6 @@ __all__ = [
     "max",
     "AbstractEagerTensor",
     "LazyTensor",
+    "any",
+    "all",
 ]

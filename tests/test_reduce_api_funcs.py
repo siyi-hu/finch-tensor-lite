@@ -49,42 +49,38 @@ def test_lazyTensor_sum(a):
     assert_equal(result, expected)
 
 
-# @pytest.mark.parametrize(
-#     # (np.array([[0, 0.618, 0, 0.001], [0, 0.01, 0, 0]])),
-#     # (np.array([[True, False, True, False], [False, False, False, False]])),
-#     "a",
-#     [
-#         (np.array([[0, 4, 0, 8], [0, 0, 0, 0]])),
-#     ],
-# )
-# def test_lazyTensor_any(a):
-#     result = finch.any(a, axis=0); output_term(result)
-#     expected = np.any(a, axis=0); output_term(expected)
-#     assert_equal(result, expected)
-#     output_term("")
+@pytest.mark.parametrize(
+    "a",
+    [
+        (np.array([[1, 0, 3, 8], [0, 0, 10, 0]])),
+        (np.array([[True, False, True, False], [False, False, False, False]])),
+    ],
+)
+def test_lazyTensor_any(a):
+    result = finch.any(a, axis=0)
+    expected = np.any(a, axis=0)
+    assert_equal(result, expected)
 
-#     result = finch.any(a, axis=1); output_term(result)
-#     expected = np.any(a, axis=1); output_term(expected)
-#     assert_equal(result, expected)
-#     output_term("")
+    result = finch.any(a, axis=1)
+    expected = np.any(a, axis=1)
+    assert_equal(result, expected)
 
 
-# @pytest.mark.parametrize(
-#     "a",
-#     [
-#         (np.array([[1, 4, 3, 8], [0, 0, 10, 0]])),
-#     ],
-# )
-# def test_lazyTensor_all(a):
-#     result = finch.all(a, axis=0); output_term(result)
-#     expected = np.all(a, axis=0); output_term(expected)
-#     # assert_equal(result, expected)
-#     output_term("")
+@pytest.mark.parametrize(
+    "a",
+    [
+        (np.array([[1, 4, 3, 8], [0, 0, 10, 0]])),
+        (np.array([[True, False, True, False], [False, False, False, False]])),
+    ],
+)
+def test_lazyTensor_all(a):
+    result = finch.all(a, axis=0)
+    expected = np.all(a, axis=0)
+    assert_equal(result, expected)
 
-#     result = finch.all(a, axis=1); output_term(result)
-#     expected = np.all(a, axis=1); output_term(expected)
-#     # assert_equal(result, expected)
-#     output_term("")
+    result = finch.all(a, axis=1)
+    expected = np.all(a, axis=1)
+    assert_equal(result, expected)
 
 
 @pytest.mark.parametrize(

@@ -5,6 +5,8 @@ from .interface import (
     LazyTensor,
     abs,
     add,
+    all,
+    any,
     compute,
     defer,
     elementwise,
@@ -50,4 +52,6 @@ __all__ = [
     "CKernel",
     "min",
     "max",
+    "any",
+    "all",
 ]
