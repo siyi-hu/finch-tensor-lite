@@ -11,6 +11,7 @@ from finch.autoschedule import (
     isolate_tables,
     lift_fields,
     lift_subqueries,
+    materialize_squeeze_expand_productions,
     normalize_names,
     optimize,
     pretty_labels,
@@ -576,3 +577,53 @@ def test_scheduler_E2E(a, b):
     expected = np.matmul(a, b)
 
     np.testing.assert_equal(result, expected)
+
+
+def test_materialize_squeeze_expand_productions():
+    plan = Plan(
+        (
+            Produces(
+                (
+                    Reorder(
+                        Relabel(Alias("A0"), (Field("i2"), Field("i1"))),
+                        (Field("i1"), Field("i2"), Field("i3")),
+                    ),
+                    Reorder(
+                        Relabel(Alias("A0"), (Field("i1"), Field("i2"))),
+                        (Field("i1"), Field("i2")),
+                    ),
+                )
+            ),
+        )
+    )
+
+    expected = Plan(
+        (
+            Plan(
+                (
+                    Query(
+                        Alias(f"#A#{_sg.counter}"),
+                        Reorder(
+                            Relabel(Alias("A0"), (Field("i2"), Field("i1"))),
+                            (Field("i2"), Field("i1"), Field("i3")),
+                        ),
+                    ),
+                    Produces(
+                        (
+                            Reorder(
+                                Relabel(
+                                    Alias(f"#A#{_sg.counter}"),
+                                    (Field("i2"), Field("i1"), Field("i3")),
+                                ),
+                                (Field("i1"), Field("i2"), Field("i3")),
+                            ),
+                            Alias("A0"),
+                        )
+                    ),
+                )
+            ),
+        )
+    )
+
+    result = materialize_squeeze_expand_productions(plan)
+    assert result == expected
