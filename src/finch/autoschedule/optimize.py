@@ -2,13 +2,16 @@ import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import reduce
+from typing import TypeVar, overload
 
 from ..finch_logic import (
     Aggregate,
     Alias,
     Field,
     Immediate,
+    LogicExpression,
     LogicNode,
+    LogicTree,
     MapJoin,
     Plan,
     Produces,
@@ -31,6 +34,8 @@ from ..symbolic import (
 )
 from ._utils import intersect, is_subsequence, setdiff, with_subsequence
 from .compiler import LogicCompiler
+
+T = TypeVar("T", bound="LogicNode")
 
 
 def optimize(prgm: LogicNode) -> LogicNode:
@@ -117,6 +122,24 @@ def pretty_labels(root: LogicNode) -> LogicNode:
     return Rewrite(PostWalk(Chain([rule_0, rule_1])))(root)
 
 
+@overload
+def _lift_subqueries_expr(  # type: ignore[overload-overlap]
+    node: Subquery, bindings: dict[LogicNode, LogicNode]
+) -> LogicExpression: ...
+
+
+@overload
+def _lift_subqueries_expr(
+    node: LogicTree, bindings: dict[LogicNode, LogicNode]
+) -> LogicTree: ...
+
+
+@overload
+def _lift_subqueries_expr(
+    node: LogicNode, bindings: dict[LogicNode, LogicNode]
+) -> LogicNode: ...
+
+
 def _lift_subqueries_expr(
     node: LogicNode, bindings: dict[LogicNode, LogicNode]
 ) -> LogicNode:
@@ -126,10 +149,10 @@ def _lift_subqueries_expr(
                 arg_2 = _lift_subqueries_expr(arg, bindings)
                 bindings[lhs] = arg_2
             return lhs
-        case any if any.is_expr():
-            return any.make_term(
-                any.head(),
-                *(_lift_subqueries_expr(x, bindings) for x in any.children()),
+        case LogicTree() as tree:
+            return tree.make_term(
+                tree.head(),
+                *(_lift_subqueries_expr(x, bindings) for x in tree.children()),
             )
         case _:
             return node
@@ -244,21 +267,50 @@ def propagate_into_reformats(root):
     return Rewrite(PostWalk(Fixpoint(rule_0)))(root)
 
 
+@overload
+def _propagate_fields(root: Plan, fields: dict[LogicNode, Iterable[Field]]) -> Plan: ...
+
+
+@overload
 def _propagate_fields(
-    root: LogicNode, fields: dict[LogicNode, Iterable[LogicNode]]
+    root: Query, fields: dict[LogicNode, Iterable[Field]]
+) -> Query: ...
+
+
+@overload
+def _propagate_fields(
+    root: Alias, fields: dict[LogicNode, Iterable[Field]]
+) -> Relabel: ...
+
+
+@overload
+def _propagate_fields(
+    root: LogicTree, fields: dict[LogicNode, Iterable[Field]]
+) -> LogicTree: ...
+
+
+@overload
+def _propagate_fields(
+    root: LogicNode, fields: dict[LogicNode, Iterable[Field]]
+) -> LogicNode: ...
+
+
+def _propagate_fields(
+    root: LogicNode, fields: dict[LogicNode, Iterable[Field]]
 ) -> LogicNode:
     match root:
         case Plan(bodies):
             return Plan(tuple(_propagate_fields(b, fields) for b in bodies))
         case Query(lhs, rhs):
-            rhs = _propagate_fields(rhs, fields)
-            fields[lhs] = rhs.get_fields()
-            return Query(lhs, rhs)
-        case Alias() as a:
+            rhs_2 = _propagate_fields(rhs, fields)
+            assert isinstance(rhs_2, LogicExpression)
+            fields[lhs] = rhs_2.get_fields()
+            return Query(lhs, rhs_2)
+        case Alias(_) as a:
             return Relabel(a, tuple(fields[a]))
-        case node if node.is_expr():
-            return node.make_term(
-                node.head(), *[_propagate_fields(c, fields) for c in node.children()]
+        case LogicTree() as tree:
+            return tree.make_term(
+                tree.head(), *(_propagate_fields(c, fields) for c in tree.children())
             )
         case node:
             return node
