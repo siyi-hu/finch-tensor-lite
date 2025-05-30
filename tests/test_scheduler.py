@@ -19,6 +19,7 @@ from finch.autoschedule import (
     propagate_fields,
     propagate_into_reformats,
     propagate_map_queries,
+    propagate_map_queries_backward,
     propagate_transpose_queries,
     push_fields,
 )
@@ -542,6 +543,77 @@ def test_flatten_plans():
     )
 
     result = flatten_plans(plan)
+    assert result == expected
+
+
+def test_propagate_map_queries_backward():
+    plan = Plan(
+        (
+            Query(Alias("A0"), Alias("A1")),
+            Alias("A0"),
+            MapJoin(
+                Immediate(mul),
+                (
+                    Table(Immediate(10), (Field("i1"),)),
+                    Aggregate(
+                        Immediate(add),
+                        Immediate(0),
+                        Table(Immediate(10), (Field("i1"), Field("i2"), Field("i3"))),
+                        (Field("i2"),),
+                    ),
+                    Table(Immediate(10), (Field("i3"),)),
+                ),
+            ),
+            Aggregate(
+                Immediate(add),
+                Immediate(10),
+                Aggregate(Immediate(add), Immediate(0), Alias("A2"), (Field("i4"),)),
+                (Field("i5"),),
+            ),
+            Reorder(
+                Aggregate(
+                    Immediate(mul),
+                    Immediate(1),
+                    Table(Immediate(10), (Field("i7"),)),
+                    (Field("i6"),),
+                ),
+                (Field("i5"),),
+            ),
+        )
+    )
+
+    expected = Plan(
+        (
+            Plan(bodies=()),
+            Alias("A1"),
+            Aggregate(
+                Immediate(add),
+                Immediate(0),
+                MapJoin(
+                    Immediate(mul),
+                    (
+                        Table(Immediate(10), (Field("i1"),)),
+                        Table(Immediate(10), (Field("i1"), Field("i2"), Field("i3"))),
+                        Table(Immediate(10), (Field("i3"),)),
+                    ),
+                ),
+                (Field("i2"),),
+            ),
+            Aggregate(
+                Immediate(add), Immediate(10), Alias("A2"), (Field("i4"), Field("i5"))
+            ),
+            Aggregate(
+                Immediate(mul),
+                Immediate(1),
+                Reorder(
+                    Table(Immediate(10), (Field("i7"),)), (Field("i5"), Field("i6"))
+                ),
+                (Field("i6"),),
+            ),
+        )
+    )
+
+    result = propagate_map_queries_backward(plan)
     assert result == expected
 
 

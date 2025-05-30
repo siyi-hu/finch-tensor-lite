@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from functools import reduce
 from typing import TypeVar, overload
 
+from finch.algebra.algebra import is_annihilator, is_distributive, is_identity
+
 from ..finch_logic import (
     Aggregate,
     Alias,
@@ -41,7 +43,7 @@ T = TypeVar("T", bound="LogicNode")
 def optimize(prgm: LogicNode) -> LogicNode:
     prgm = lift_subqueries(prgm)
 
-    # prgm = propagate_map_queries_backward(prgm)
+    prgm = propagate_map_queries_backward(prgm)
 
     prgm = isolate_reformats(prgm)
     prgm = isolate_aggregates(prgm)
@@ -211,6 +213,84 @@ def propagate_map_queries(root: LogicNode) -> LogicNode:
 
     root = Rewrite(PreWalk(Chain([rule_0, rule_1])))(root)
     return Rewrite(PostWalk(rule_2))(root)
+
+
+def propagate_map_queries_backward(root):
+    def rule_0(ex):
+        match ex:
+            case Aggregate(op, init, arg, ()):
+                return MapJoin(op, (init, arg))
+
+    root = Rewrite(PostWalk(rule_0))(root)
+
+    uses: dict[LogicNode, int] = {}
+    defs: dict[LogicNode, LogicNode] = {}
+    rets = _get_productions(root)
+    for node in PostOrderDFS(root):
+        match node:
+            case Alias() as a:
+                uses[a] = uses.get(a, 0) + 1
+            case Query(a, b):
+                uses[a] = uses.get(a, 0) - 1
+                defs[a] = b
+
+    def rule_1(ex):
+        match ex:
+            case Query(a, _) if uses[a] == 1 and a not in rets:
+                return Plan()
+
+    def rule_2(ex):
+        match ex:
+            case a if uses.get(a, 0) == 1 and a not in rets:
+                return defs.get(a, a)
+
+    root = Rewrite(PreWalk(Chain([rule_1, rule_2])))(root)
+    root = push_fields(root)
+
+    def rule_1(ex):
+        match ex:
+            case MapJoin(
+                Immediate() as f,
+                args,
+            ):
+                for idx, item in reversed(list(enumerate(args))):
+                    before_item = args[:idx]
+                    after_item = args[idx + 1 :]
+                    match item:
+                        case (
+                            Aggregate(
+                                Immediate() as g, Immediate() as init, arg, idxs
+                            ) as agg
+                        ) if (
+                            is_distributive(f.val, g.val)
+                            and is_annihilator(f.val, init.val)
+                            and len(agg.get_fields())
+                            == len(MapJoin(f, (*before_item, *after_item)).get_fields())
+                        ):
+                            return Aggregate(
+                                g,
+                                init,
+                                MapJoin(f, (*before_item, arg, *after_item)),
+                                idxs,
+                            )
+                return None
+
+    def rule_2(ex):
+        match ex:
+            case Aggregate(
+                Immediate() as op_1,
+                Immediate() as init_1,
+                Aggregate(op_2, Immediate() as init_2, arg, idxs_1),
+                idxs_2,
+            ) if op_1 == op_2 and is_identity(op_2.val, init_2.val):
+                return Aggregate(op_1, init_1, arg, idxs_1 + idxs_2)
+
+    def rule_3(ex):
+        match ex:
+            case Reorder(Aggregate(op, init, arg, idxs_1), idxs_2):
+                return Aggregate(op, init, Reorder(arg, idxs_2 + idxs_1), idxs_1)
+
+    return Rewrite(Fixpoint(PreWalk(Chain([rule_1, rule_2, rule_3]))))(root)
 
 
 def propagate_copy_queries(root):

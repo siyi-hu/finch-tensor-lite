@@ -30,6 +30,7 @@ from .optimize import (
     propagate_fields,
     propagate_into_reformats,
     propagate_map_queries,
+    propagate_map_queries_backward,
     propagate_transpose_queries,
     push_fields,
 )
@@ -66,6 +67,8 @@ __all__ = [
     "propagate_fields",
     "propagate_into_reformats",
     "propagate_map_queries",
+    "propagate_map_queries_backward",
+    "propagate_copy_queries",
     "propagate_transpose_queries",
     "push_fields",
 ]
