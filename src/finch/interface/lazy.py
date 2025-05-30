@@ -9,7 +9,6 @@ from typing import Any
 from numpy.core.numeric import normalize_axis_tuple
 
 from ..algebra import element_type, fill_value, fixpoint_type, init_value, return_type
-from ..algebra.operator import and_test, or_test
 from ..finch_logic import (
     Aggregate,
     Alias,
@@ -408,8 +407,14 @@ def any(
     Test whether any element of input array ``x`` along given axis is True.
     """
     if init is None:
-        init = init_value(or_test, x)
-    return reduce(or_test, x, axis=axis, keepdims=keepdims, init=init)
+        init = init_value(builtins.any, x)
+    return reduce(
+        operator.or_,
+        elementwise(operator.truth, x),
+        axis=axis,
+        keepdims=keepdims,
+        init=init,
+    )
 
 
 def all(
@@ -424,8 +429,14 @@ def all(
     Test whether all elements of input array ``x`` along given axis are True.
     """
     if init is None:
-        init = init_value(and_test, x)
-    return reduce(and_test, x, axis=axis, keepdims=keepdims, init=init)
+        init = init_value(builtins.all, x)
+    return reduce(
+        operator.and_,
+        elementwise(operator.truth, x),
+        axis=axis,
+        keepdims=keepdims,
+        init=init,
+    )
 
 
 def min(
