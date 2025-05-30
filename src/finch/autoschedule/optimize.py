@@ -68,7 +68,7 @@ def optimize(prgm: LogicNode) -> LogicNode:
 
     prgm = flatten_plans(prgm)  # concordize(prgm)
 
-    # prgm = materialize_squeeze_expand_productions(prgm)
+    prgm = materialize_squeeze_expand_productions(prgm)
     prgm = propagate_copy_queries(prgm)
 
     prgm = propagate_into_reformats(prgm)
@@ -599,6 +599,33 @@ def normalize_names(root):
                 return Field(normname(name))
 
     root = Rewrite(PostWalk(rule_0))(root)
+    return Rewrite(PostWalk(rule_1))(root)
+
+
+def materialize_squeeze_expand_productions(root):
+    def rule_0(ex: LogicNode, preamble: list[Query]):
+        match ex:
+            case Reorder(Relabel(Alias(_) as tns, idxs_1), idxs_2) if set(
+                idxs_1
+            ) != set(idxs_2):
+                new_tns = Alias(gensym("A"))
+                new_idxs = with_subsequence(intersect(idxs_1, idxs_2), idxs_2)
+                preamble.append(Query(new_tns, Reorder(Relabel(tns, idxs_1), new_idxs)))
+                if new_idxs == idxs_2:
+                    return new_tns
+                return Reorder(Relabel(new_tns, new_idxs), idxs_2)
+            case Reorder(Relabel(arg, idxs_1), idxs_2) if idxs_1 == idxs_2:
+                return arg
+            case node:
+                return node
+
+    def rule_1(ex):
+        match ex:
+            case Produces(bodies):
+                preamble = []
+                new_bodies = tuple(rule_0(body, preamble) for body in bodies)
+                return Plan(tuple(preamble + [Produces(new_bodies)]))
+
     return Rewrite(PostWalk(rule_1))(root)
 
 
