@@ -20,102 +20,93 @@ def output_term(args):
 @pytest.mark.parametrize(
     "a",
     [
+        (np.array([[True, False, True, False], [False, False, False, False]])),
+    ],
+)
+@pytest.mark.parametrize(
+    "finch_op, np_op",
+    [
+        (finch.prod, np.prod),
+        # (finch.sum,  np.sum),
+        (finch.any, np.any),
+        (finch.all, np.all),
+        (finch.min, np.min),
+        (finch.max, np.max),
+    ],
+)
+@pytest.mark.parametrize(
+    "axis",
+    [
+        None,
+        0,
+        1,
+        (0, 1),
+    ],
+)
+def test_reduction_api_bitwise(a, finch_op, np_op, axis):
+    result = finch_op(a, axis=axis)
+    expected = np_op(a, axis=axis)
+    assert_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "a",
+    [
+        (np.array([[2, 0], [1, 3]])),
         (np.array([[2, 3, 4], [5, 6, 7]])),
-    ],
-)
-def test_lazyTensor_prod(a):
-    result = finch.prod(a, axis=0)
-    expected = np.prod(a, axis=0)
-    assert_equal(result, expected)
-
-    result = finch.prod(a, axis=1)
-    expected = np.prod(a, axis=1)
-    assert_equal(result, expected)
-
-
-@pytest.mark.parametrize(
-    "a",
-    [
-        (np.array([[2, 4, 6, 8], [1, 3, 5, 7]])),
-    ],
-)
-def test_lazyTensor_sum(a):
-    result = finch.sum(a, axis=0)
-    expected = np.sum(a, axis=0)
-    assert_equal(result, expected)
-
-    result = finch.sum(a, axis=1)
-    expected = np.sum(a, axis=1)
-    assert_equal(result, expected)
-
-
-@pytest.mark.parametrize(
-    "a",
-    [
         (np.array([[1, 0, 3, 8], [0, 0, 10, 0]])),
-        (np.array([[True, False, True, False], [False, False, False, False]])),
-    ],
-)
-def test_lazyTensor_any(a):
-    result = finch.any(a, axis=0)
-    expected = np.any(a, axis=0)
-    assert_equal(result, expected)
-
-    result = finch.any(a, axis=1)
-    expected = np.any(a, axis=1)
-    assert_equal(result, expected)
-
-
-@pytest.mark.parametrize(
-    "a",
-    [
-        (np.array([[1, 4, 3, 8], [0, 0, 10, 0]])),
-        (np.array([[True, False, True, False], [False, False, False, False]])),
-    ],
-)
-def test_lazyTensor_all(a):
-    result = finch.all(a, axis=0)
-    expected = np.all(a, axis=0)
-    assert_equal(result, expected)
-
-    result = finch.all(a, axis=1)
-    expected = np.all(a, axis=1)
-    assert_equal(result, expected)
-
-
-@pytest.mark.parametrize(
-    "a",
-    [
         (np.array([[100, 14, 9, 78], [44, 3, 5, 10]])),
+    ],
+)
+@pytest.mark.parametrize(
+    "finch_op, np_op",
+    [
+        (finch.prod, np.prod),
+        (finch.sum, np.sum),
+        (finch.any, np.any),
+        (finch.all, np.all),
+        (finch.min, np.min),
+        (finch.max, np.max),
+    ],
+)
+@pytest.mark.parametrize(
+    "axis",
+    [None, 0, 1, (0, 1)],
+)
+def test_reduction_api_integer(a, finch_op, np_op, axis):
+    result = finch_op(a, axis=axis)
+    expected = np_op(a, axis=axis)
+    assert_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "a",
+    [
         (np.array([[0, 0.618, 0, 0.001], [0, 0.01, 0, 0]])),
         (np.array([[10000.0, 1.0, 89.0, 78], [401.0, 3, 5, 10.2]])),
-        (np.array([[True, False, True, False], [False, False, False, False]])),
     ],
 )
-def test_lazyTensor_min(a):
-    result = finch.min(a, axis=0)
-    expected = np.min(a, axis=0)
-    assert_equal(result, expected)
-
-    result = finch.min(a, axis=1)
-    expected = np.min(a, axis=1)
-    assert_equal(result, expected)
-
-
 @pytest.mark.parametrize(
-    "a",
+    "finch_op, np_op",
     [
-        (np.array([[100, 14, 9, 78], [44, 3, 5, 10]])),
-        (np.array([[0, 0.618, 0, 0.001], [0, 0.01, 0, 0]])),
-        (np.array([[10000.0, 1.0, 89.0, 78], [401.0, 3, 5, 10.2]])),
-        (np.array([[True, False, True, False], [False, False, False, False]])),
+        (finch.prod, np.prod),
+        (finch.sum, np.sum),
+        (finch.any, np.any),
+        (finch.all, np.all),
+        (finch.min, np.min),
+        (finch.max, np.max),
     ],
 )
-def test_lazyTensor_max(a):
-    result = finch.max(a, axis=0)
-    expected = np.max(a, axis=0)
-    assert_equal(result, expected)
-
-    result = finch.max(a, axis=1)
-    expected = np.max(a, axis=1)
+@pytest.mark.parametrize(
+    "axis",
+    [
+        None,
+        0,
+        1,
+        (0, 1),
+    ],
+)
+def test_reduction_api_floating(a, finch_op, np_op, axis):
+    result = finch_op(a, axis=axis)
+    expected = np_op(a, axis=axis)
     assert_equal(result, expected)
