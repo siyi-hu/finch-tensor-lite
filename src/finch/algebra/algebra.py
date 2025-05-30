@@ -50,8 +50,6 @@ from typing import Any
 
 import numpy as np
 
-from .operator import and_test, or_test
-
 _properties: dict[tuple[type | Hashable, str, str], Any] = {}
 
 StableNumber = bool | int | float | complex | np.generic
@@ -225,8 +223,9 @@ register_property(
     "return_type",
     lambda op, a, b: query_property(a, "__add__", "return_type", b),
 )
-register_property(or_test, "__call__", "return_type", lambda op, a, b: bool)
-register_property(and_test, "__call__", "return_type", lambda op, a, b: bool)
+register_property(any, "__call__", "return_type", lambda op, a, b: bool)
+register_property(all, "__call__", "return_type", lambda op, a, b: bool)
+
 
 _unary_operators: dict[Callable, str] = {
     operator.abs: "__abs__",
@@ -254,6 +253,9 @@ for op, meth in _unary_operators.items():
 
     for T in StableNumber.__args__:
         register_property(T, meth, "return_type", _return_type_unary(meth))
+
+
+register_property(operator.truth, "__call__", "return_type", lambda op, a: bool)
 
 
 def is_associative(op: Any) -> bool:
@@ -356,5 +358,6 @@ register_property(
 register_property(
     max, "__call__", "init_value", lambda op, arg: _max_init(element_type(arg))
 )
-register_property(or_test, "__call__", "init_value", lambda op, arg: False)
-register_property(and_test, "__call__", "init_value", lambda op, arg: True)
+register_property(any, "__call__", "init_value", lambda op, arg: False)
+register_property(all, "__call__", "init_value", lambda op, arg: True)
+register_property(operator.truth, "__call__", "init_value", lambda op, arg: True)
