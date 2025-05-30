@@ -11,6 +11,7 @@ from finch.autoschedule import (
     isolate_tables,
     lift_fields,
     lift_subqueries,
+    materialize_squeeze_expand_productions,
     normalize_names,
     optimize,
     pretty_labels,
@@ -18,6 +19,7 @@ from finch.autoschedule import (
     propagate_fields,
     propagate_into_reformats,
     propagate_map_queries,
+    propagate_map_queries_backward,
     propagate_transpose_queries,
     push_fields,
 )
@@ -163,10 +165,10 @@ def test_propagate_fields():
     "node,pass_fn",
     [
         (
-            Aggregate(Immediate(""), Immediate(""), Immediate(""), ()),
+            Aggregate(Immediate(""), Immediate(""), Reorder(Immediate(""), ()), ()),
             isolate_aggregates,
         ),
-        (Reformat(Immediate(""), Immediate("")), isolate_reformats),
+        (Reformat(Immediate(""), Reorder(Immediate(""), ())), isolate_reformats),
         (Table(Immediate(""), ()), isolate_tables),
     ],
 )
@@ -544,6 +546,77 @@ def test_flatten_plans():
     assert result == expected
 
 
+def test_propagate_map_queries_backward():
+    plan = Plan(
+        (
+            Query(Alias("A0"), Alias("A1")),
+            Alias("A0"),
+            MapJoin(
+                Immediate(mul),
+                (
+                    Table(Immediate(10), (Field("i1"),)),
+                    Aggregate(
+                        Immediate(add),
+                        Immediate(0),
+                        Table(Immediate(10), (Field("i1"), Field("i2"), Field("i3"))),
+                        (Field("i2"),),
+                    ),
+                    Table(Immediate(10), (Field("i3"),)),
+                ),
+            ),
+            Aggregate(
+                Immediate(add),
+                Immediate(10),
+                Aggregate(Immediate(add), Immediate(0), Alias("A2"), (Field("i4"),)),
+                (Field("i5"),),
+            ),
+            Reorder(
+                Aggregate(
+                    Immediate(mul),
+                    Immediate(1),
+                    Table(Immediate(10), (Field("i7"),)),
+                    (Field("i6"),),
+                ),
+                (Field("i5"),),
+            ),
+        )
+    )
+
+    expected = Plan(
+        (
+            Plan(bodies=()),
+            Alias("A1"),
+            Aggregate(
+                Immediate(add),
+                Immediate(0),
+                MapJoin(
+                    Immediate(mul),
+                    (
+                        Table(Immediate(10), (Field("i1"),)),
+                        Table(Immediate(10), (Field("i1"), Field("i2"), Field("i3"))),
+                        Table(Immediate(10), (Field("i3"),)),
+                    ),
+                ),
+                (Field("i2"),),
+            ),
+            Aggregate(
+                Immediate(add), Immediate(10), Alias("A2"), (Field("i4"), Field("i5"))
+            ),
+            Aggregate(
+                Immediate(mul),
+                Immediate(1),
+                Reorder(
+                    Table(Immediate(10), (Field("i7"),)), (Field("i5"), Field("i6"))
+                ),
+                (Field("i6"),),
+            ),
+        )
+    )
+
+    result = propagate_map_queries_backward(plan)
+    assert result == expected
+
+
 @pytest.mark.parametrize(
     "a, b",
     [
@@ -576,3 +649,53 @@ def test_scheduler_E2E(a, b):
     expected = np.matmul(a, b)
 
     np.testing.assert_equal(result, expected)
+
+
+def test_materialize_squeeze_expand_productions():
+    plan = Plan(
+        (
+            Produces(
+                (
+                    Reorder(
+                        Relabel(Alias("A0"), (Field("i2"), Field("i1"))),
+                        (Field("i1"), Field("i2"), Field("i3")),
+                    ),
+                    Reorder(
+                        Relabel(Alias("A0"), (Field("i1"), Field("i2"))),
+                        (Field("i1"), Field("i2")),
+                    ),
+                )
+            ),
+        )
+    )
+
+    expected = Plan(
+        (
+            Plan(
+                (
+                    Query(
+                        Alias(f"#A#{_sg.counter}"),
+                        Reorder(
+                            Relabel(Alias("A0"), (Field("i2"), Field("i1"))),
+                            (Field("i2"), Field("i1"), Field("i3")),
+                        ),
+                    ),
+                    Produces(
+                        (
+                            Reorder(
+                                Relabel(
+                                    Alias(f"#A#{_sg.counter}"),
+                                    (Field("i2"), Field("i1"), Field("i3")),
+                                ),
+                                (Field("i1"), Field("i2"), Field("i3")),
+                            ),
+                            Alias("A0"),
+                        )
+                    ),
+                )
+            ),
+        )
+    )
+
+    result = materialize_squeeze_expand_productions(plan)
+    assert result == expected

@@ -2,13 +2,18 @@ import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 from functools import reduce
+from typing import TypeVar, overload
+
+from finch.algebra.algebra import is_annihilator, is_distributive, is_identity
 
 from ..finch_logic import (
     Aggregate,
     Alias,
     Field,
     Immediate,
+    LogicExpression,
     LogicNode,
+    LogicTree,
     MapJoin,
     Plan,
     Produces,
@@ -32,11 +37,13 @@ from ..symbolic import (
 from ._utils import intersect, is_subsequence, setdiff, with_subsequence
 from .compiler import LogicCompiler
 
+T = TypeVar("T", bound="LogicNode")
+
 
 def optimize(prgm: LogicNode) -> LogicNode:
     prgm = lift_subqueries(prgm)
 
-    # prgm = propagate_map_queries_backward(prgm)
+    prgm = propagate_map_queries_backward(prgm)
 
     prgm = isolate_reformats(prgm)
     prgm = isolate_aggregates(prgm)
@@ -61,7 +68,7 @@ def optimize(prgm: LogicNode) -> LogicNode:
 
     prgm = flatten_plans(prgm)  # concordize(prgm)
 
-    # prgm = materialize_squeeze_expand_productions(prgm)
+    prgm = materialize_squeeze_expand_productions(prgm)
     prgm = propagate_copy_queries(prgm)
 
     prgm = propagate_into_reformats(prgm)
@@ -117,6 +124,24 @@ def pretty_labels(root: LogicNode) -> LogicNode:
     return Rewrite(PostWalk(Chain([rule_0, rule_1])))(root)
 
 
+@overload
+def _lift_subqueries_expr(  # type: ignore[overload-overlap]
+    node: Subquery, bindings: dict[LogicNode, LogicNode]
+) -> LogicExpression: ...
+
+
+@overload
+def _lift_subqueries_expr(
+    node: LogicTree, bindings: dict[LogicNode, LogicNode]
+) -> LogicTree: ...
+
+
+@overload
+def _lift_subqueries_expr(
+    node: LogicNode, bindings: dict[LogicNode, LogicNode]
+) -> LogicNode: ...
+
+
 def _lift_subqueries_expr(
     node: LogicNode, bindings: dict[LogicNode, LogicNode]
 ) -> LogicNode:
@@ -126,10 +151,10 @@ def _lift_subqueries_expr(
                 arg_2 = _lift_subqueries_expr(arg, bindings)
                 bindings[lhs] = arg_2
             return lhs
-        case any if any.is_expr():
-            return any.make_term(
-                any.head(),
-                *(_lift_subqueries_expr(x, bindings) for x in any.children()),
+        case LogicTree() as tree:
+            return tree.make_term(
+                tree.head(),
+                *(_lift_subqueries_expr(x, bindings) for x in tree.children()),
             )
         case _:
             return node
@@ -190,6 +215,84 @@ def propagate_map_queries(root: LogicNode) -> LogicNode:
     return Rewrite(PostWalk(rule_2))(root)
 
 
+def propagate_map_queries_backward(root):
+    def rule_0(ex):
+        match ex:
+            case Aggregate(op, init, arg, ()):
+                return MapJoin(op, (init, arg))
+
+    root = Rewrite(PostWalk(rule_0))(root)
+
+    uses: dict[LogicNode, int] = {}
+    defs: dict[LogicNode, LogicNode] = {}
+    rets = _get_productions(root)
+    for node in PostOrderDFS(root):
+        match node:
+            case Alias() as a:
+                uses[a] = uses.get(a, 0) + 1
+            case Query(a, b):
+                uses[a] = uses.get(a, 0) - 1
+                defs[a] = b
+
+    def rule_1(ex):
+        match ex:
+            case Query(a, _) if uses[a] == 1 and a not in rets:
+                return Plan()
+
+    def rule_2(ex):
+        match ex:
+            case a if uses.get(a, 0) == 1 and a not in rets:
+                return defs.get(a, a)
+
+    root = Rewrite(PreWalk(Chain([rule_1, rule_2])))(root)
+    root = push_fields(root)
+
+    def rule_1(ex):
+        match ex:
+            case MapJoin(
+                Immediate() as f,
+                args,
+            ):
+                for idx, item in reversed(list(enumerate(args))):
+                    before_item = args[:idx]
+                    after_item = args[idx + 1 :]
+                    match item:
+                        case (
+                            Aggregate(
+                                Immediate() as g, Immediate() as init, arg, idxs
+                            ) as agg
+                        ) if (
+                            is_distributive(f.val, g.val)
+                            and is_annihilator(f.val, init.val)
+                            and len(agg.get_fields())
+                            == len(MapJoin(f, (*before_item, *after_item)).get_fields())
+                        ):
+                            return Aggregate(
+                                g,
+                                init,
+                                MapJoin(f, (*before_item, arg, *after_item)),
+                                idxs,
+                            )
+                return None
+
+    def rule_2(ex):
+        match ex:
+            case Aggregate(
+                Immediate() as op_1,
+                Immediate() as init_1,
+                Aggregate(op_2, Immediate() as init_2, arg, idxs_1),
+                idxs_2,
+            ) if op_1 == op_2 and is_identity(op_2.val, init_2.val):
+                return Aggregate(op_1, init_1, arg, idxs_1 + idxs_2)
+
+    def rule_3(ex):
+        match ex:
+            case Reorder(Aggregate(op, init, arg, idxs_1), idxs_2):
+                return Aggregate(op, init, Reorder(arg, idxs_2 + idxs_1), idxs_1)
+
+    return Rewrite(Fixpoint(PreWalk(Chain([rule_1, rule_2, rule_3]))))(root)
+
+
 def propagate_copy_queries(root):
     copies = {}
     for node in PostOrderDFS(root):
@@ -244,21 +347,50 @@ def propagate_into_reformats(root):
     return Rewrite(PostWalk(Fixpoint(rule_0)))(root)
 
 
+@overload
+def _propagate_fields(root: Plan, fields: dict[LogicNode, Iterable[Field]]) -> Plan: ...
+
+
+@overload
 def _propagate_fields(
-    root: LogicNode, fields: dict[LogicNode, Iterable[LogicNode]]
+    root: Query, fields: dict[LogicNode, Iterable[Field]]
+) -> Query: ...
+
+
+@overload
+def _propagate_fields(
+    root: Alias, fields: dict[LogicNode, Iterable[Field]]
+) -> Relabel: ...
+
+
+@overload
+def _propagate_fields(
+    root: LogicTree, fields: dict[LogicNode, Iterable[Field]]
+) -> LogicTree: ...
+
+
+@overload
+def _propagate_fields(
+    root: LogicNode, fields: dict[LogicNode, Iterable[Field]]
+) -> LogicNode: ...
+
+
+def _propagate_fields(
+    root: LogicNode, fields: dict[LogicNode, Iterable[Field]]
 ) -> LogicNode:
     match root:
         case Plan(bodies):
             return Plan(tuple(_propagate_fields(b, fields) for b in bodies))
         case Query(lhs, rhs):
-            rhs = _propagate_fields(rhs, fields)
-            fields[lhs] = rhs.get_fields()
-            return Query(lhs, rhs)
-        case Alias() as a:
+            rhs_2 = _propagate_fields(rhs, fields)
+            assert isinstance(rhs_2, LogicExpression)
+            fields[lhs] = rhs_2.get_fields()
+            return Query(lhs, rhs_2)
+        case Alias(_) as a:
             return Relabel(a, tuple(fields[a]))
-        case node if node.is_expr():
-            return node.make_term(
-                node.head(), *[_propagate_fields(c, fields) for c in node.children()]
+        case LogicTree() as tree:
+            return tree.make_term(
+                tree.head(), *(_propagate_fields(c, fields) for c in tree.children())
             )
         case node:
             return node
@@ -467,6 +599,33 @@ def normalize_names(root):
                 return Field(normname(name))
 
     root = Rewrite(PostWalk(rule_0))(root)
+    return Rewrite(PostWalk(rule_1))(root)
+
+
+def materialize_squeeze_expand_productions(root):
+    def rule_0(ex: LogicNode, preamble: list[Query]):
+        match ex:
+            case Reorder(Relabel(Alias(_) as tns, idxs_1), idxs_2) if set(
+                idxs_1
+            ) != set(idxs_2):
+                new_tns = Alias(gensym("A"))
+                new_idxs = with_subsequence(intersect(idxs_1, idxs_2), idxs_2)
+                preamble.append(Query(new_tns, Reorder(Relabel(tns, idxs_1), new_idxs)))
+                if new_idxs == idxs_2:
+                    return new_tns
+                return Reorder(Relabel(new_tns, new_idxs), idxs_2)
+            case Reorder(Relabel(arg, idxs_1), idxs_2) if idxs_1 == idxs_2:
+                return arg
+            case node:
+                return node
+
+    def rule_1(ex):
+        match ex:
+            case Produces(bodies):
+                preamble = []
+                new_bodies = tuple(rule_0(body, preamble) for body in bodies)
+                return Plan(tuple(preamble + [Produces(new_bodies)]))
+
     return Rewrite(PostWalk(rule_1))(root)
 
 
