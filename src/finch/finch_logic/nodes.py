@@ -198,6 +198,7 @@ class Aggregate(LogicTree, LogicExpression):
     def from_children(cls, op, init, arg, *idxs):
         return cls(op, init, arg, idxs)
 
+
 @dataclass(eq=True, frozen=True)
 class Reorder(LogicTree, LogicExpression):
     """
