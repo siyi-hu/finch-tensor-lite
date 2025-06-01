@@ -298,12 +298,9 @@ def is_distributive(op, other_op):
     return query_property(op, "__call__", "is_distributive", other_op)
 
 
-register_property(
-    operator.mul,
-    "__call__",
-    "is_distributive",
-    lambda op, other_op: other_op == operator.add,
-)
+register_property(operator.mul, "__call__", "is_distributive", lambda op, other_op: other_op in (operator.add, operator.sub))
+register_property(operator.and_, "__call__", "is_distributive", lambda op, other_op: other_op in (operator.or_, operator.xor))
+register_property(operator.or_, "__call__", "is_distributive", lambda op, other_op: other_op == operator.and_)
 
 
 def is_annihilator(op, val):
