@@ -395,7 +395,7 @@ def elementwise(f: Callable, *args) -> LazyTensor:
                     raise ValueError("Invalid shape for broadcasting")
                 idims.append(Field(gensym("j")))
         bargs.append(Reorder(Relabel(arg.data, tuple(idims)), tuple(odims)))
-    data = MapJoin(Immediate(f), tuple(bargs))
+    data = Reorder(MapJoin(Immediate(f), tuple(bargs)), idxs)
     new_fill_value = f(*[x.fill_value for x in args])
     new_element_type = return_type(f, *[x.element_type for x in args])
     return LazyTensor(identify(data), shape, new_fill_value, new_element_type)
