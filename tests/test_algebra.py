@@ -1,7 +1,8 @@
 import math
 import operator
 
-from finch.algebra import is_annihilator, is_distributive, is_identity, is_associative
+from finch.algebra import is_annihilator, is_associative, is_distributive, is_identity
+
 
 def test_algebra_selected():
     assert is_distributive(operator.mul, operator.add)
@@ -27,6 +28,3 @@ def test_algebra_selected():
     assert is_associative(operator.and_)
     assert is_associative(operator.xor)
     assert is_associative(operator.or_)
-
-
-
