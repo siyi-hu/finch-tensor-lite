@@ -381,7 +381,7 @@ def elementwise(f: Callable, *args) -> LazyTensor:
         )
         for i in range(ndim)
     )
-    idxs = [Field(gensym("i")) for _ in range(ndim)]
+    idxs = tuple(Field(gensym("i")) for _ in range(ndim))
     bargs = []
     for arg in args:
         idims = []
