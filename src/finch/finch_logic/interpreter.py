@@ -85,10 +85,8 @@ class FinchLogicInterpreter:
                     ]
                     result[*crds] = op(*vals)
                 return TableValue(result, idxs)
-            case Aggregate(op, init, arg, idxs):
+            case Aggregate(Immediate(op), Immediate(init), arg, idxs):
                 arg = self(arg)
-                init = init.val
-                op = op.val
                 dtype = fixpoint_type(op, init, element_type(arg.tns))
                 new_shape = tuple(
                     dim
