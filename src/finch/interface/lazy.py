@@ -496,8 +496,7 @@ def any(
     """
     Test whether any element of input array ``x`` along given axis is True.
     """
-    if init is None:
-        init = init_value(builtins.any, x)
+    x = defer(x)
     return reduce(
         operator.or_,
         elementwise(operator.truth, x),
@@ -518,8 +517,7 @@ def all(
     """
     Test whether all elements of input array ``x`` along given axis are True.
     """
-    if init is None:
-        init = init_value(builtins.all, x)
+    x = defer(x)
     return reduce(
         operator.and_,
         elementwise(operator.truth, x),
@@ -540,8 +538,7 @@ def min(
     """
     Return the minimum of input array ``arr`` along given axis.
     """
-    if init is None:
-        init = init_value(builtins.min, x)
+    x = defer(x)
     return reduce(builtins.min, x, axis=axis, keepdims=keepdims, init=init)
 
 
@@ -556,6 +553,5 @@ def max(
     """
     Return the maximum of input array ``arr`` along given axis.
     """
-    if init is None:
-        init = init_value(builtins.max, x)
+    x = defer(x)
     return reduce(builtins.max, x, axis=axis, keepdims=keepdims, init=init)

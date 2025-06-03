@@ -179,6 +179,8 @@ _reflexive_operators = {
     operator.and_: ("__and__", "__rand__"),
     operator.xor: ("__xor__", "__rxor__"),
     operator.or_: ("__or__", "__ror__"),
+    min: ("__add__", "__radd__"),
+    max: ("__sub__", "__rsub__"),
 }
 
 
@@ -210,21 +212,6 @@ for op, (meth, rmeth) in _reflexive_operators.items():
     for T in StableNumber.__args__:
         register_property(T, meth, "return_type", _return_type_reflexive(meth))
         register_property(T, rmeth, "return_type", _return_type_reflexive(rmeth))
-
-register_property(
-    min,
-    "__call__",
-    "return_type",
-    lambda op, a, b: query_property(a, "__add__", "return_type", b),
-)
-register_property(
-    max,
-    "__call__",
-    "return_type",
-    lambda op, a, b: query_property(a, "__add__", "return_type", b),
-)
-register_property(any, "__call__", "return_type", lambda op, a, b: bool)
-register_property(all, "__call__", "return_type", lambda op, a, b: bool)
 
 
 _unary_operators: dict[Callable, str] = {
@@ -421,34 +408,6 @@ for T in StableNumber.__args__:
     register_property(T, "__or__", "init_value", lambda a, b: a(False))
 
 
-def _min_init(arg):
-    dtype = np.dtype(arg) if isinstance(arg, np.ndarray) else np.dtype(arg)
-    if np.issubdtype(dtype, np.floating):
-        return math.inf
-    if np.issubdtype(dtype, np.integer):
-        return np.iinfo(dtype).max
-    if np.issubdtype(dtype, np.bool_):
-        return True
-    raise TypeError("Unsupported dtype for min")
-
-
-def _max_init(arg):
-    dtype = np.dtype(arg) if isinstance(arg, np.ndarray) else np.dtype(arg)
-    if np.issubdtype(dtype, np.floating):
-        return -math.inf
-    if np.issubdtype(dtype, np.integer):
-        return np.iinfo(dtype).min
-    if np.issubdtype(dtype, np.bool_):
-        return False
-    raise TypeError("Unsupported dtype for max")
-
-
-register_property(
-    min, "__call__", "init_value", lambda op, arg: _min_init(element_type(arg))
-)
-register_property(
-    max, "__call__", "init_value", lambda op, arg: _max_init(element_type(arg))
-)
-register_property(any, "__call__", "init_value", lambda op, arg: False)
-register_property(all, "__call__", "init_value", lambda op, arg: True)
+register_property(min, "__call__", "init_value", lambda op, arg: math.inf)
+register_property(max, "__call__", "init_value", lambda op, arg: -math.inf)
 register_property(operator.truth, "__call__", "init_value", lambda op, arg: True)
