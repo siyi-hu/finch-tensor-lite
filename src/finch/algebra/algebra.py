@@ -179,8 +179,6 @@ _reflexive_operators = {
     operator.and_: ("__and__", "__rand__"),
     operator.xor: ("__xor__", "__rxor__"),
     operator.or_: ("__or__", "__ror__"),
-    min: ("__add__", "__radd__"),
-    max: ("__sub__", "__rsub__"),
 }
 
 
@@ -212,6 +210,20 @@ for op, (meth, rmeth) in _reflexive_operators.items():
     for T in StableNumber.__args__:
         register_property(T, meth, "return_type", _return_type_reflexive(meth))
         register_property(T, rmeth, "return_type", _return_type_reflexive(rmeth))
+
+
+register_property(
+    min,
+    "__call__",
+    "return_type",
+    lambda op, a, b: query_property(a, "__add__", "return_type", b),
+)
+register_property(
+    max,
+    "__call__",
+    "return_type",
+    lambda op, a, b: query_property(a, "__add__", "return_type", b),
+)
 
 
 _unary_operators: dict[Callable, str] = {
