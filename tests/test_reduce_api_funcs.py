@@ -21,6 +21,9 @@ def output_term(args):
     "a",
     [
         (np.array([[True, False, True, False], [False, False, False, False]])),
+        (np.array([[True, 0, 2, 1], [3, False, True, False]])),
+        (np.array([[True, 0.01, True, 1], [10.0, False, 1.1, 0.0]])),
+        (np.array([[True, 0, 1.0, 1], [0, False, True, False]])),
     ],
 )
 @pytest.mark.parametrize(
