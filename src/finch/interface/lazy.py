@@ -8,7 +8,15 @@ from typing import Any
 
 from numpy.core.numeric import normalize_axis_tuple
 
-from ..algebra import element_type, fill_value, fixpoint_type, init_value, return_type
+from ..algebra import (
+    element_type,
+    fill_value,
+    fixpoint_type,
+    init_value,
+    promote_max,
+    promote_min,
+    return_type,
+)
 from ..finch_logic import (
     Aggregate,
     Alias,
@@ -539,7 +547,7 @@ def min(
     Return the minimum of input array ``arr`` along given axis.
     """
     x = defer(x)
-    return reduce(builtins.min, x, axis=axis, keepdims=keepdims, init=init)
+    return reduce(promote_min, x, axis=axis, keepdims=keepdims, init=init)
 
 
 def max(
@@ -554,4 +562,4 @@ def max(
     Return the maximum of input array ``arr`` along given axis.
     """
     x = defer(x)
-    return reduce(builtins.max, x, axis=axis, keepdims=keepdims, init=init)
+    return reduce(promote_max, x, axis=axis, keepdims=keepdims, init=init)
