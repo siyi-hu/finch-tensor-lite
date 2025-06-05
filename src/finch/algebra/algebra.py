@@ -50,6 +50,8 @@ from typing import Any
 
 import numpy as np
 
+from .operator import promote_max, promote_min
+
 _properties: dict[tuple[type | Hashable, str, str], Any] = {}
 
 StableNumber = bool | int | float | complex | np.generic
@@ -213,16 +215,16 @@ for op, (meth, rmeth) in _reflexive_operators.items():
 
 
 register_property(
-    min,
+    promote_min,
     "__call__",
     "return_type",
-    lambda op, a, b: query_property(a, "__add__", "return_type", b),
+    lambda op, a, b: return_type(operator.add, a, b),
 )
 register_property(
-    max,
+    promote_max,
     "__call__",
     "return_type",
-    lambda op, a, b: query_property(a, "__add__", "return_type", b),
+    lambda op, a, b: return_type(operator.add, a, b),
 )
 
 
@@ -420,6 +422,6 @@ for T in StableNumber.__args__:
     register_property(T, "__or__", "init_value", lambda a, b: a(False))
 
 
-register_property(min, "__call__", "init_value", lambda op, arg: math.inf)
-register_property(max, "__call__", "init_value", lambda op, arg: -math.inf)
+register_property(promote_min, "__call__", "init_value", lambda op, arg: math.inf)
+register_property(promote_max, "__call__", "init_value", lambda op, arg: -math.inf)
 register_property(operator.truth, "__call__", "init_value", lambda op, arg: True)
