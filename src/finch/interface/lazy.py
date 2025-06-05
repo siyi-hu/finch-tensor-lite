@@ -433,66 +433,6 @@ def prod(
     return reduce(operator.mul, x, axis=axis, dtype=dtype, keepdims=keepdims)
 
 
-def add(x1, x2) -> LazyTensor:
-    return elementwise(operator.add, defer(x1), defer(x2))
-
-
-def subtract(x1, x2) -> LazyTensor:
-    return elementwise(operator.sub, defer(x1), defer(x2))
-
-
-def multiply(x1, x2) -> LazyTensor:
-    return elementwise(operator.mul, defer(x1), defer(x2))
-
-
-def abs(x) -> LazyTensor:
-    return elementwise(operator.abs, defer(x))
-
-
-def positive(x) -> LazyTensor:
-    return elementwise(operator.pos, defer(x))
-
-
-def negative(x) -> LazyTensor:
-    return elementwise(operator.neg, defer(x))
-
-
-def bitwise_and(x1, x2) -> LazyTensor:
-    return elementwise(operator.and_, defer(x1), defer(x2))
-
-
-def bitwise_left_shift(x1, x2) -> LazyTensor:
-    return elementwise(operator.lshift, defer(x1), defer(x2))
-
-
-def bitwise_or(x1, x2) -> LazyTensor:
-    return elementwise(operator.or_, defer(x1), defer(x2))
-
-
-def bitwise_right_shift(x1, x2) -> LazyTensor:
-    return elementwise(operator.rshift, defer(x1), defer(x2))
-
-
-def bitwise_xor(x1, x2) -> LazyTensor:
-    return elementwise(operator.xor, defer(x1), defer(x2))
-
-
-def truediv(x1, x2) -> LazyTensor:
-    return elementwise(operator.truediv, defer(x1), defer(x2))
-
-
-def floordiv(x1, x2) -> LazyTensor:
-    return elementwise(operator.floordiv, defer(x1), defer(x2))
-
-
-def mod(x1, x2) -> LazyTensor:
-    return elementwise(operator.mod, defer(x1), defer(x2))
-
-
-def pow(x1, x2) -> LazyTensor:
-    return elementwise(operator.pow, defer(x1), defer(x2))
-
-
 def any(
     x,
     /,
@@ -563,3 +503,63 @@ def max(
     """
     x = defer(x)
     return reduce(promote_max, x, axis=axis, keepdims=keepdims, init=init)
+
+
+def add(x1, x2) -> LazyTensor:
+    return elementwise(operator.add, defer(x1), defer(x2))
+
+
+def subtract(x1, x2) -> LazyTensor:
+    return elementwise(operator.sub, defer(x1), defer(x2))
+
+
+def multiply(x1, x2) -> LazyTensor:
+    return elementwise(operator.mul, defer(x1), defer(x2))
+
+
+def abs(x) -> LazyTensor:
+    return elementwise(operator.abs, defer(x))
+
+
+def positive(x) -> LazyTensor:
+    return elementwise(operator.pos, defer(x))
+
+
+def negative(x) -> LazyTensor:
+    return elementwise(operator.neg, defer(x))
+
+
+def bitwise_and(x1, x2) -> LazyTensor:
+    return elementwise(operator.and_, defer(x1), defer(x2))
+
+
+def bitwise_left_shift(x1, x2) -> LazyTensor:
+    return elementwise(operator.lshift, defer(x1), defer(x2))
+
+
+def bitwise_or(x1, x2) -> LazyTensor:
+    return elementwise(operator.or_, defer(x1), defer(x2))
+
+
+def bitwise_right_shift(x1, x2) -> LazyTensor:
+    return elementwise(operator.rshift, defer(x1), defer(x2))
+
+
+def bitwise_xor(x1, x2) -> LazyTensor:
+    return elementwise(operator.xor, defer(x1), defer(x2))
+
+
+def truediv(x1, x2) -> LazyTensor:
+    return elementwise(operator.truediv, defer(x1), defer(x2))
+
+
+def floordiv(x1, x2) -> LazyTensor:
+    return elementwise(operator.floordiv, defer(x1), defer(x2))
+
+
+def mod(x1, x2) -> LazyTensor:
+    return elementwise(operator.mod, defer(x1), defer(x2))
+
+
+def pow(x1, x2) -> LazyTensor:
+    return elementwise(operator.pow, defer(x1), defer(x2))
