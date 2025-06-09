@@ -1,5 +1,5 @@
 from .eager import (
-    AbstractEagerTensor,
+    EagerTensor,
     abs,
     add,
     all,
@@ -12,6 +12,8 @@ from .eager import (
     elementwise,
     expand_dims,
     floordiv,
+    matmul,
+    matrix_transpose,
     max,
     min,
     mod,
@@ -25,7 +27,9 @@ from .eager import (
     squeeze,
     subtract,
     sum,
+    tensordot,
     truediv,
+    vecdot,
 )
 
 # from .tensor import *
@@ -52,8 +56,10 @@ __all__ = [
     "negative",
     "min",
     "max",
-    "AbstractEagerTensor",
+    "EagerTensor",
     "LazyTensor",
+    "matmul",
+    "matrix_transpose",
     "bitwise_and",
     "bitwise_or",
     "bitwise_xor",
@@ -63,6 +69,8 @@ __all__ = [
     "floordiv",
     "mod",
     "pow",
+    "tensordot",
+    "vecdot",
     "any",
     "all",
 ]
