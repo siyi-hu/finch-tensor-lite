@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from itertools import accumulate, zip_longest
 from typing import Any
 
+import numpy as np
 from numpy.core.numeric import normalize_axis_tuple
 
 from ..algebra import conjugate as conj
@@ -770,3 +771,66 @@ def vecdot(x1, x2, /, *, axis=-1) -> LazyTensor:
         multiply(conjugate(x1), x2),
         axis=axis,
     )
+
+
+def _fill_array(value: int, shape: tuple[int, ...]):
+    if not shape:
+        return value
+    size, *rest = shape
+    return [_fill_array(value, tuple(rest)) for _ in range(size)]
+
+
+def mean(x, /, *, axis: int | tuple[int, ...] | None = None, keepdims: bool = False):
+    """
+    Calculates the arithmetic mean of the input array ``x``.
+    """
+    shape = tuple(dim for i, dim in enumerate(x.shape) if i != axis)
+    n = defer(np.array(_fill_array(x.shape[axis], shape)))
+    s = sum(x, axis=axis, keepdims=keepdims)
+    return elementwise(operator.truediv, s, n)
+
+
+def var(
+    x,
+    /,
+    *,
+    axis: int | tuple[int, ...] | None = None,
+    correction: float = 0.0,
+    keepdims: bool = False,
+):
+    """
+    Calculates the variance of the input array ``x``.
+    """
+    m = mean(x, axis=axis, keepdims=keepdims)
+    v = x - m  # equivalent to elementwise(operator.sub, x, m)
+
+    # n = defer(np.full(x.shape, 2, dtype=int))
+    # v2 = elementwise(operator.pow, v, n)
+
+    # v2 = elementwise(operator.mul, v, v)
+
+    # v2 = elementwise(operator.mul, v, v)
+    # mm = expand_dims(m, axis=axis)
+    # v = (x - mm) * (x - mm)
+    # v = (arr - mm) ** 2
+    # n = defer(np.full(arr.shape, 2, dtype=int))
+    # v2 = elementwise(operator.pow, v, 2)
+    # v2 = elementwise(operator.mul, v, v)
+    # return elementwise(operator.truediv, sum(v, axis=axis, keepdims=keepdims), n)
+
+    return elementwise(operator.mul, v, v)
+
+
+# def std(
+#     x,
+#     /,
+#     *,
+#     axis: int | tuple[int, ...] | None = None,
+#     correction: int | float = 0.0,
+#     keepdims: bool = False
+# ):
+#     """
+#     Calculates the standard deviation of the input array ``x``.
+#     """
+#     d = var(x, axis=axis, keepdims=keepdims, correction=correction)
+#     return elementwise(operator.pow, d, 0.5)
