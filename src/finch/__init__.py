@@ -25,6 +25,7 @@ from .interface import (
     matmul,
     matrix_transpose,
     max,
+    mean,
     min,
     mod,
     multiply,
@@ -39,6 +40,7 @@ from .interface import (
     sum,
     tensordot,
     truediv,
+    var,
     vecdot,
 )
 
@@ -84,4 +86,6 @@ __all__ = [
     "max",
     "any",
     "all",
+    "mean",
+    "var",
 ]

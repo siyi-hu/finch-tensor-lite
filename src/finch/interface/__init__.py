@@ -15,6 +15,7 @@ from .eager import (
     matmul,
     matrix_transpose,
     max,
+    mean,
     min,
     mod,
     multiply,
@@ -29,6 +30,7 @@ from .eager import (
     sum,
     tensordot,
     truediv,
+    var,
     vecdot,
 )
 
@@ -73,4 +75,6 @@ __all__ = [
     "vecdot",
     "any",
     "all",
+    "mean",
+    "var",
 ]

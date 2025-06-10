@@ -777,17 +777,23 @@ def _fill_array(value: int, shape: tuple[int, ...]):
     if not shape:
         return value
     size, *rest = shape
-    return [_fill_array(value, tuple(rest)) for _ in range(size)]
+    return np.array([_fill_array(value, tuple(rest)) for _ in range(size)])
 
 
 def mean(x, /, *, axis: int | tuple[int, ...] | None = None, keepdims: bool = False):
     """
     Calculates the arithmetic mean of the input array ``x``.
     """
+    x = defer(x)
     shape = tuple(dim for i, dim in enumerate(x.shape) if i != axis)
-    n = defer(np.array(_fill_array(x.shape[axis], shape)))
+    ndim = _fill_array(x.shape[axis], shape)
+    n = defer(
+        ndim.astype(
+            np.promote_types(getattr(x, "dtype", np.asarray(x).dtype), np.float64)
+        )
+    )
     s = sum(x, axis=axis, keepdims=keepdims)
-    return elementwise(operator.truediv, s, n)
+    return truediv(s, n)
 
 
 def var(
@@ -801,36 +807,32 @@ def var(
     """
     Calculates the variance of the input array ``x``.
     """
-    m = mean(x, axis=axis, keepdims=keepdims)
-    v = x - m  # equivalent to elementwise(operator.sub, x, m)
+    x = defer(np.array([[2, 4, 6, 8], [1, 3, 5, 7]]))
+    m = defer(np.array([[1, 1, 1, 1], [1, 1, 1, 1]]))
+    # n = defer(np.array([[2.0, 2.0, 2.0, 2.0], [2.0, 2.0, 2.0, 2.0]]))
+    n = defer(np.array([[2, 2, 2, 2], [2, 2, 2, 2]]))
+    o = defer(np.array([[3, 3, 3, 3], [3, 3, 3, 3]]))
 
-    # n = defer(np.full(x.shape, 2, dtype=int))
-    # v2 = elementwise(operator.pow, v, n)
+    return add(add(subtract(x, m), n), o)
 
-    # v2 = elementwise(operator.mul, v, v)
-
-    # v2 = elementwise(operator.mul, v, v)
-    # mm = expand_dims(m, axis=axis)
-    # v = (x - mm) * (x - mm)
-    # v = (arr - mm) ** 2
-    # n = defer(np.full(arr.shape, 2, dtype=int))
-    # v2 = elementwise(operator.pow, v, 2)
-    # v2 = elementwise(operator.mul, v, v)
-    # return elementwise(operator.truediv, sum(v, axis=axis, keepdims=keepdims), n)
-
-    return elementwise(operator.mul, v, v)
+    # x = defer(x)
+    # n = defer(_fill_array((x.shape[axis] - correction), shape))
+    # d = x - mean(x, axis=axis, keepdims=keepdims)
+    # v = pow(d, _fill_array(2.0, d.shape))
+    # return truediv(v, n)
 
 
-# def std(
-#     x,
-#     /,
-#     *,
-#     axis: int | tuple[int, ...] | None = None,
-#     correction: int | float = 0.0,
-#     keepdims: bool = False
-# ):
-#     """
-#     Calculates the standard deviation of the input array ``x``.
-#     """
-#     d = var(x, axis=axis, keepdims=keepdims, correction=correction)
-#     return elementwise(operator.pow, d, 0.5)
+def std(
+    x,
+    /,
+    *,
+    axis: int | tuple[int, ...] | None = None,
+    correction: float = 0.0,
+    keepdims: bool = False,
+):
+    """
+    Calculates the standard deviation of the input array ``x``.
+    """
+    x = defer(x)
+    d = var(x, axis=axis, correction=correction, keepdims=keepdims)
+    return pow(d, _fill_array(0.5, d.shape))
