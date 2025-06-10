@@ -773,7 +773,7 @@ def vecdot(x1, x2, /, *, axis=-1) -> LazyTensor:
     )
 
 
-def _fill_array(value: int, shape: tuple[int, ...]):
+def _fill_array(value, shape: tuple[int, ...]):
     if not shape:
         return value
     size, *rest = shape
