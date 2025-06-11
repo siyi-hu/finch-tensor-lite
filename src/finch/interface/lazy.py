@@ -409,7 +409,7 @@ def reduce(
             fields[i] if i in axis else Field(gensym("j")) for i in range(x.ndim)
         )
         data = Reorder(data, keeps)
-        shape = tuple(shape[i] if i in axis else 1 for i in range(x.ndim))
+        shape = tuple(x.shape[i] if i not in axis else 1 for i in range(x.ndim))
     if dtype is None:
         dtype = fixpoint_type(op, init, x.element_type)
     return LazyTensor(identify(data), shape, init, dtype)
@@ -823,14 +823,8 @@ def mean(x, /, *, axis: int | tuple[int, ...] | None = None, keepdims: bool = Fa
     Calculates the arithmetic mean of the input array ``x``.
     """
     x = defer(x)
-    shape = tuple(dim for i, dim in enumerate(x.shape) if i != axis)
-    ndim = _fill_array(x.shape[axis], shape)
-    n = defer(
-        ndim.astype(
-            np.promote_types(getattr(x, "dtype", np.asarray(x).dtype), np.float64)
-        )
-    )
     s = sum(x, axis=axis, keepdims=keepdims)
+    n = defer(_fill_array(x.shape[axis], s.shape))
     return truediv(s, n)
 
 
@@ -845,19 +839,12 @@ def var(
     """
     Calculates the variance of the input array ``x``.
     """
-    x = defer(np.array([[2, 4, 6, 8], [1, 3, 5, 7]]))
-    m = defer(np.array([[1, 1, 1, 1], [1, 1, 1, 1]]))
-    # n = defer(np.array([[2.0, 2.0, 2.0, 2.0], [2.0, 2.0, 2.0, 2.0]]))
-    n = defer(np.array([[2, 2, 2, 2], [2, 2, 2, 2]]))
-    o = defer(np.array([[3, 3, 3, 3], [3, 3, 3, 3]]))
-
-    return add(add(subtract(x, m), n), o)
-
-    # x = defer(x)
-    # n = defer(_fill_array((x.shape[axis] - correction), shape))
-    # d = x - mean(x, axis=axis, keepdims=keepdims)
-    # v = pow(d, _fill_array(2.0, d.shape))
-    # return truediv(v, n)
+    x = defer(x)
+    m = mean(x, axis=axis, keepdims=False)
+    d = subtract(x, m)
+    n = defer(_fill_array((x.shape[axis] - correction), x.shape))
+    v = truediv(pow(d, defer(_fill_array(2.0, d.shape))), n)
+    return sum(v, axis=axis, keepdims=keepdims)
 
 
 def std(

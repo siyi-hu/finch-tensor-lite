@@ -407,3 +407,16 @@ def var(
     if isinstance(x, lazy.LazyTensor):
         return lazy.var(x, axis=axis, correction=correction, keepdims=keepdims)
     return compute(lazy.var(x, axis=axis, correction=correction, keepdims=keepdims))
+
+
+def std(
+    x,
+    /,
+    *,
+    axis: int | tuple[int, ...] | None = None,
+    correction: float = 0.0,
+    keepdims: bool = False,
+):
+    if isinstance(x, lazy.LazyTensor):
+        return lazy.std(x, axis=axis, correction=correction, keepdims=keepdims)
+    return compute(lazy.std(x, axis=axis, correction=correction, keepdims=keepdims))

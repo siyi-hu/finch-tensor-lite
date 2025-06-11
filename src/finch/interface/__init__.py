@@ -26,6 +26,7 @@ from .eager import (
     prod,
     reduce,
     squeeze,
+    std,
     subtract,
     sum,
     tensordot,
@@ -77,4 +78,5 @@ __all__ = [
     "all",
     "mean",
     "var",
+    "std",
 ]

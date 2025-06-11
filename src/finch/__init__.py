@@ -36,6 +36,7 @@ from .interface import (
     prod,
     reduce,
     squeeze,
+    std,
     subtract,
     sum,
     tensordot,
@@ -96,4 +97,5 @@ __all__ = [
     "ElementLevelFormat",
     "mean",
     "var",
+    "std",
 ]
