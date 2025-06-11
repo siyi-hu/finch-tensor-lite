@@ -37,7 +37,8 @@ class NumpyBuffer(Buffer, CArgument, NumbaArgument):
             raise ValueError("NumPy array must be C-contiguous")
         self.arr = arr
 
-    def get_format(self):
+    @property
+    def format(self):
         """
         Returns the format of the buffer, which is a NumpyBufferFormat.
         """
@@ -90,10 +91,10 @@ class NumpyBufferFormat(CBufferFormat, NumbaBufferFormat):
     """
 
     def __init__(self, dtype: type):
-        self._dtype = dtype
+        self._dtype = np.dtype(dtype).type
 
     def __eq__(self, other):
-        if not isinstance(other, type(self)):
+        if not isinstance(other, NumpyBufferFormat):
             return False
         return self._dtype == other._dtype
 
@@ -115,8 +116,10 @@ class NumpyBufferFormat(CBufferFormat, NumbaBufferFormat):
     def __hash__(self):
         return hash(self._dtype)
 
-    def __call__(self, len_: int):
-        return NumpyBuffer(np.zeros(len_, dtype=self._dtype))
+    def __call__(self, len: int = 0, dtype: type | None = None):
+        if dtype is None:
+            dtype = self._dtype
+        return NumpyBuffer(np.zeros(len, dtype=dtype))
 
     def c_type(self):
         return ctypes.POINTER(CNumpyBuffer)

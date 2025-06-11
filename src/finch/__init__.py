@@ -43,6 +43,11 @@ from .interface import (
     var,
     vecdot,
 )
+from .tensor import (
+    DenseLevelFormat,
+    ElementLevelFormat,
+    FiberTensorFormat,
+)
 
 __all__ = [
     "defer",
@@ -86,6 +91,9 @@ __all__ = [
     "max",
     "any",
     "all",
+    "FiberTensorFormat",
+    "DenseLevelFormat",
+    "ElementLevelFormat",
     "mean",
     "var",
 ]
