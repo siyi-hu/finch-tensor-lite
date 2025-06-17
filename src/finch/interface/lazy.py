@@ -4,14 +4,13 @@ import sys
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from itertools import accumulate, zip_longest
-from numbers import Number
 from typing import Any
 
 import numpy as np
 from numpy.core.numeric import normalize_axis_tuple
 
-from ..algebra import conjugate as conj
 from ..algebra import (
+    asarray,
     element_type,
     fill_value,
     fixpoint_type,
@@ -20,6 +19,7 @@ from ..algebra import (
     promote_min,
     return_type,
 )
+from ..algebra import conjugate as conj
 from ..finch_logic import (
     Aggregate,
     Alias,
@@ -33,12 +33,32 @@ from ..finch_logic import (
     Table,
 )
 from ..symbolic import gensym
+from .eager import EagerTensor
 from .overrides import OverrideTensor
 
 
 def identify(data):
     lhs = Alias(gensym("A"))
     return Subquery(lhs, data)
+
+
+@dataclass
+class Scalar(EagerTensor):
+    val: Any
+
+    @property
+    def ndims(self):
+        return 0
+
+    @property
+    def element_type(self):
+        return type(self.val)
+
+    def __getitem__(self, idx):
+        return self.val
+
+    def asarray(self):
+        return np.asarray(self.val)
 
 
 @dataclass
@@ -223,25 +243,6 @@ class LazyTensor(OverrideTensor):
         )
 
 
-def asarray(arr):
-    """
-    Return np.ndarray if arr is a scalar type value, otherwise return unchanged arr.
-
-    Parameters:
-    ------------
-    - arr: The input array to be converted into a LazyTensor.
-
-    Returns:
-    ------------
-    out: array
-        an output array converted from input parameter ``arr``.
-    """
-    if isinstance(arr, Number | str | bytes | bytearray | memoryview):
-        return np.asarray(arr)
-
-    return arr
-
-
 def defer(arr) -> LazyTensor:
     """
     - defer(arr) -> LazyTensor:
@@ -257,7 +258,7 @@ def defer(arr) -> LazyTensor:
     """
     if isinstance(arr, LazyTensor):
         return arr
-    arr = asarray(arr)
+    arr = asarray(Scalar(arr))
     name = Alias(gensym("A"))
     idxs = tuple(Field(gensym("i")) for _ in range(arr.ndim))
     shape = tuple(arr.shape)

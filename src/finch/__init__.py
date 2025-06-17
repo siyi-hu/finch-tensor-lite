@@ -12,7 +12,6 @@ from .interface import (
     add,
     all,
     any,
-    asarray,
     asin,
     asinh,
     atan,
@@ -63,7 +62,6 @@ from .tensor import (
 )
 
 __all__ = [
-    "asarray",
     "defer",
     "compute",
     "fuse",

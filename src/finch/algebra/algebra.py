@@ -228,6 +228,20 @@ def shape_type(arg: Any) -> type:
     return query_property(arg, "shape_type", "__attr__")
 
 
+def asarray(arg: Any) -> type:
+    """Convert given argument and return np.asarray(arg) for the input.
+
+    Args:
+        arg: The object to be converted.
+
+    Returns:
+        The np.asarray(arg) result of the given object.
+    """
+    if hasattr(arg, "asarray"):
+        return arg.asarray
+    return query_property(arg, "asarray", "__attr__")
+
+
 register_property(
     np.ndarray,
     "length_type",
@@ -655,3 +669,9 @@ for trig_op in (
     )
 
 register_property(np.atan2, "__call__", "return_type", lambda op, a, b: float)
+
+for t in StableNumber.__args__:
+    register_property(t, "asarray", "__attr__", lambda x: np.asarray(x))
+
+register_property(str, "asarray", "__attr__", lambda x: np.asarray(x))
+register_property(bytes, "asarray", "__attr__", lambda x: np.asarray(x))

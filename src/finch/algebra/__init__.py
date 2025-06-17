@@ -1,5 +1,6 @@
 from .algebra import (
     StableNumber,
+    asarray,
     element_type,
     fill_value,
     fixpoint_type,
@@ -42,4 +43,5 @@ __all__ = [
     "conjugate",
     "overwrite",
     "InitWrite",
+    "asarray",
 ]
