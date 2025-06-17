@@ -55,6 +55,7 @@ itself.
 import math
 import operator
 from collections.abc import Callable, Hashable
+from numbers import Number
 from typing import Any, TypeVar
 
 import numpy as np
@@ -228,7 +229,7 @@ def shape_type(arg: Any) -> type:
     return query_property(arg, "shape_type", "__attr__")
 
 
-def asarray(arg: Any) -> type:
+def asarray(arg: Any) -> Any:
     """Convert given argument and return np.asarray(arg) for the input.
 
     Args:
@@ -238,7 +239,7 @@ def asarray(arg: Any) -> type:
         The np.asarray(arg) result of the given object.
     """
     if hasattr(arg, "asarray"):
-        return arg.asarray
+        return arg.asarray()
     return query_property(arg, "asarray", "__attr__")
 
 
@@ -670,8 +671,6 @@ for trig_op in (
 
 register_property(np.atan2, "__call__", "return_type", lambda op, a, b: float)
 
-for t in StableNumber.__args__:
-    register_property(t, "asarray", "__attr__", lambda x: np.asarray(x))
-
+register_property(Number, "asarray", "__attr__", lambda x: np.asarray(x))
 register_property(str, "asarray", "__attr__", lambda x: np.asarray(x))
 register_property(bytes, "asarray", "__attr__", lambda x: np.asarray(x))
