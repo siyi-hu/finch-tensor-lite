@@ -6,6 +6,7 @@ from .eager import (
     add,
     all,
     any,
+    asarray,
     asin,
     asinh,
     atan,
@@ -101,4 +102,5 @@ __all__ = [
     "atan",
     "atanh",
     "atan2",
+    "asarray",
 ]

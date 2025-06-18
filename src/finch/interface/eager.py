@@ -2,6 +2,10 @@ import builtins
 import sys
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
+from typing import Any
+
+import numpy as np
 
 from . import lazy
 from .fuse import compute
@@ -182,6 +186,36 @@ class EagerTensor(OverrideTensor, ABC):
             raise ValueError("Cannot convert non-scalar tensor to bool.")
         # dispatch to the scalar value's `__bool__` method
         return bool(self[()])
+
+
+@dataclass
+class Scalar(EagerTensor):
+    val: Any
+
+    @property
+    def shape(self):
+        return ()
+
+    @property
+    def ndim(self):
+        return 0
+
+    @property
+    def element_type(self):
+        return type(self.val)
+
+    def __getitem__(self, idx):
+        return self.val
+
+    def asarray(self):
+        return np.asarray(self.val)
+
+
+def asarray(arr):
+    if isinstance(arr, np.ndarray):
+        return arr
+
+    return lazy.asarray(Scalar(arr))
 
 
 def permute_dims(arg, /, axis: tuple[int, ...]):

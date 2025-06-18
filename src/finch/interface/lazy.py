@@ -223,26 +223,6 @@ class LazyTensor(OverrideTensor):
         )
 
 
-@dataclass
-class Scalar:
-    val: Any
-
-    @property
-    def shape(self):
-        return ()
-
-    @property
-    def ndims(self):
-        return 0
-
-    @property
-    def element_type(self):
-        return type(self.val)
-
-    def __getitem__(self, idx):
-        return self.val
-
-
 def defer(arr) -> LazyTensor:
     """
     - defer(arr) -> LazyTensor:
