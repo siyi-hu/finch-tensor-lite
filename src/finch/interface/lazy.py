@@ -9,9 +9,8 @@ from typing import Any
 import numpy as np
 from numpy.core.numeric import normalize_axis_tuple
 
-from ..algebra import conjugate as conj
 from ..algebra import (
-    # asarray,
+    asarray,
     element_type,
     fill_value,
     fixpoint_type,
@@ -20,6 +19,7 @@ from ..algebra import (
     promote_min,
     return_type,
 )
+from ..algebra import conjugate as conj
 from ..finch_logic import (
     Aggregate,
     Alias,
@@ -242,9 +242,6 @@ class Scalar:
     def __getitem__(self, idx):
         return self.val
 
-    def asarray(self):
-        return np.asarray(self.val)
-
 
 def defer(arr) -> LazyTensor:
     """
@@ -261,8 +258,7 @@ def defer(arr) -> LazyTensor:
     """
     if isinstance(arr, LazyTensor):
         return arr
-    # arr = asarray(Scalar(arr))
-    arr = np.asarray(arr)
+    arr = asarray(arr)
     name = Alias(gensym("A"))
     idxs = tuple(Field(gensym("i")) for _ in range(arr.ndim))
     shape = tuple(arr.shape)
