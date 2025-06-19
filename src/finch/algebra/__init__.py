@@ -1,7 +1,5 @@
 from .algebra import (
-    Scalar,
     StableNumber,
-    asarray,
     element_type,
     fill_value,
     fixpoint_type,
@@ -26,7 +24,6 @@ from .operator import (
 
 __all__ = [
     "StableNumber",
-    "Scalar",
     "fill_value",
     "element_type",
     "length_type",
@@ -45,5 +42,4 @@ __all__ = [
     "conjugate",
     "overwrite",
     "InitWrite",
-    "asarray",
 ]

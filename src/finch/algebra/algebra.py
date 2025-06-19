@@ -64,28 +64,6 @@ _properties: dict[tuple[type | Hashable, str, str], Any] = {}
 StableNumber = bool | int | float | complex | np.generic
 
 
-class Scalar:
-    val: Any
-
-    def __init__(self, val: Any):
-        self.val = val
-
-    @property
-    def shape(self):
-        return ()
-
-    @property
-    def ndim(self):
-        return 0
-
-    @property
-    def element_type(self):
-        return type(self.val)
-
-    def __getitem__(self, idx):
-        return self.val
-
-
 def query_property(obj: type | Hashable, attr: str, prop: str, *args) -> Any:
     """Queries a property of an attribute of an object or class.  Properties can
     be overridden by calling register_property on the object or it's class.
@@ -248,28 +226,6 @@ def shape_type(arg: Any) -> type:
     if hasattr(arg, "shape_type"):
         return arg.shape_type
     return query_property(arg, "shape_type", "__attr__")
-
-
-def asarray(arg: Any) -> Any:
-    """Convert given argument and return np.asarray(arg) for the scalar type input.
-    If input argument is already array type, return unchanged.
-
-    Args:
-        arg: The object to be converted.
-
-    Returns:
-        The array type result of the given object.
-    """
-    if hasattr(arg, "asarray"):
-        return arg.asarray()
-
-    try:
-        return query_property(arg, "asarray", "__attr__")
-    except AttributeError:
-        try:
-            return query_property(Scalar(arg), "asarray", "__attr__")
-        except AttributeError:
-            return arg
 
 
 register_property(
@@ -699,8 +655,3 @@ for trig_op in (
     )
 
 register_property(np.atan2, "__call__", "return_type", lambda op, a, b: float)
-
-register_property(Scalar, "asarray", "__attr__", lambda x: np.asarray(x))
-register_property(np.ndarray, "asarray", "__attr__", lambda x: x)
-# register_property(LazyTensor, "asarray", "__attr__", lambda x: x)
-# register_property(EagerTensor, "asarray", "__attr__", lambda x: x)

@@ -9,17 +9,17 @@ from typing import Any
 import numpy as np
 from numpy.core.numeric import normalize_axis_tuple
 
+from ..algebra import conjugate as conj
 from ..algebra import (
-    asarray,
     element_type,
     fill_value,
     fixpoint_type,
     init_value,
     promote_max,
     promote_min,
+    query_property,
     return_type,
 )
-from ..algebra import conjugate as conj
 from ..finch_logic import (
     Aggregate,
     Alias,
@@ -221,6 +221,25 @@ class LazyTensor(OverrideTensor):
         raise ValueError(
             "Cannot convert LazyTensor to bool. Use compute() to evaluate it first."
         )
+
+
+def asarray(arg: Any) -> Any:
+    """Convert given argument and return np.asarray(arg) for the scalar type input.
+    If input argument is already array type, return unchanged.
+
+    Args:
+        arg: The object to be converted.
+
+    Returns:
+        The array type result of the given object.
+    """
+    if hasattr(arg, "asarray"):
+        return arg.asarray()
+
+    try:
+        return query_property(arg, "asarray", "__attr__")
+    except AttributeError:
+        return np.asarray(arg)
 
 
 def defer(arr) -> LazyTensor:

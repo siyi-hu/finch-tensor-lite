@@ -1,11 +1,13 @@
 from .eager import (
     EagerTensor,
+    Scalar,
     abs,
     acos,
     acosh,
     add,
     all,
     any,
+    asarray,
     asin,
     asinh,
     atan,
@@ -48,7 +50,7 @@ from .eager import (
 
 # from .tensor import *
 from .fuse import compute, fuse, fused
-from .lazy import LazyTensor, Scalar, asarray, defer
+from .lazy import LazyTensor, defer
 
 __all__ = [
     "defer",

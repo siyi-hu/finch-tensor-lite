@@ -6,6 +6,7 @@ from .codegen import (
 from .interface import (
     EagerTensor,
     LazyTensor,
+    Scalar,
     abs,
     acos,
     acosh,
@@ -82,6 +83,7 @@ __all__ = [
     "negative",
     "EagerTensor",
     "LazyTensor",
+    "Scalar",
     "fill_value",
     "element_type",
     "matmul",
