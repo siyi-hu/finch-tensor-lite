@@ -18,6 +18,7 @@ from ..algebra import (
     promote_max,
     promote_min,
     query_property,
+    register_property,
     return_type,
 )
 from ..finch_logic import (
@@ -221,6 +222,10 @@ class LazyTensor(OverrideTensor):
         raise ValueError(
             "Cannot convert LazyTensor to bool. Use compute() to evaluate it first."
         )
+
+
+register_property(np.ndarray, "asarray", "__attr__", lambda x: x)
+register_property(LazyTensor, "asarray", "__attr__", lambda x: x)
 
 
 def asarray(arg: Any) -> Any:

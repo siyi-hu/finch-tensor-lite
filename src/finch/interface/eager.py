@@ -192,9 +192,13 @@ class EagerTensor(OverrideTensor, ABC):
 @dataclass
 class Scalar(EagerTensor):
     val: Any
+    fill_value: Any
+    dtype: Any
 
     def __init__(self, val: Any):
         self.val = val
+        self.fill_value = val
+        self.dtype = type(val)
 
     @property
     def shape(self):
@@ -212,17 +216,9 @@ class Scalar(EagerTensor):
         return self.val
 
 
-register_property(Scalar, "asarray", "__attr__", lambda x: np.asarray(x))
-register_property(np.ndarray, "asarray", "__attr__", lambda x: x)
 register_property(EagerTensor, "asarray", "__attr__", lambda x: x)
-register_property(lazy.LazyTensor, "asarray", "__attr__", lambda x: x)
-
-
-def asarray(arg):
-    try:
-        return lazy.asarray(arg)
-    except AttributeError:
-        return lazy.asarray(Scalar(arg))
+register_property(object, "asarray", "__attr__", lambda x: Scalar(x))
+register_property(Scalar, "asarray", "__attr__", lambda x: np.asarray(x))
 
 
 def permute_dims(arg, /, axis: tuple[int, ...]):
