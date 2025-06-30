@@ -84,6 +84,7 @@ def test_codegen(compiler, buffer):
     a_var = asm.Variable("a", buf.format)
     i_var = asm.Variable("i", int)
     length_var = asm.Variable("l", int)
+    a_slt = asm.Slot("a_", buf.format)
     prgm = asm.Module(
         (
             asm.Function(
@@ -91,30 +92,32 @@ def test_codegen(compiler, buffer):
                 (a_var,),
                 asm.Block(
                     (
-                        asm.Assign(length_var, asm.Length(a_var)),
+                        asm.Unpack(a_slt, a_var),
+                        asm.Assign(length_var, asm.Length(a_slt)),
                         asm.Resize(
-                            a_var,
+                            a_slt,
                             asm.Call(
-                                asm.Immediate(operator.mul),
-                                (asm.Length(a_var), asm.Immediate(2)),
+                                asm.Literal(operator.mul),
+                                (asm.Length(a_slt), asm.Literal(2)),
                             ),
                         ),
                         asm.ForLoop(
                             i_var,
-                            asm.Immediate(0),
+                            asm.Literal(0),
                             length_var,
                             asm.Store(
-                                a_var,
+                                a_slt,
                                 asm.Call(
-                                    asm.Immediate(operator.add), (i_var, length_var)
+                                    asm.Literal(operator.add), (i_var, length_var)
                                 ),
                                 asm.Call(
-                                    asm.Immediate(operator.add),
-                                    (asm.Load(a_var, i_var), asm.Immediate(1)),
+                                    asm.Literal(operator.add),
+                                    (asm.Load(a_slt, i_var), asm.Literal(1)),
                                 ),
                             ),
                         ),
-                        asm.Return(asm.Immediate(0)),
+                        asm.Repack(a_slt),
+                        asm.Return(asm.Literal(0)),
                     )
                 ),
             ),
@@ -148,7 +151,9 @@ def test_dot_product(compiler, buffer):
     ab = buffer(a)
     bb = buffer(b)
     ab_v = asm.Variable("a", ab.format)
+    ab_slt = asm.Slot("a_", ab.format)
     bb_v = asm.Variable("b", bb.format)
+    bb_slt = asm.Slot("b_", bb.format)
     prgm = asm.Module(
         (
             asm.Function(
@@ -159,24 +164,26 @@ def test_dot_product(compiler, buffer):
                 ),
                 asm.Block(
                     (
-                        asm.Assign(c, asm.Immediate(np.float64(0.0))),
+                        asm.Assign(c, asm.Literal(np.float64(0.0))),
+                        asm.Unpack(ab_slt, ab_v),
+                        asm.Unpack(bb_slt, bb_v),
                         asm.ForLoop(
                             i,
-                            asm.Immediate(np.int64(0)),
-                            asm.Length(ab_v),
+                            asm.Literal(np.int64(0)),
+                            asm.Length(ab_slt),
                             asm.Block(
                                 (
                                     asm.Assign(
                                         c,
                                         asm.Call(
-                                            asm.Immediate(operator.add),
+                                            asm.Literal(operator.add),
                                             (
                                                 c,
                                                 asm.Call(
-                                                    asm.Immediate(operator.mul),
+                                                    asm.Literal(operator.mul),
                                                     (
-                                                        asm.Load(ab_v, i),
-                                                        asm.Load(bb_v, i),
+                                                        asm.Load(ab_slt, i),
+                                                        asm.Load(bb_slt, i),
                                                     ),
                                                 ),
                                             ),
@@ -185,6 +192,8 @@ def test_dot_product(compiler, buffer):
                                 )
                             ),
                         ),
+                        asm.Repack(ab_slt),
+                        asm.Repack(bb_slt),
                         asm.Return(c),
                     )
                 ),
@@ -220,19 +229,19 @@ def test_if_statement(compiler, buffer):
                 (),
                 asm.Block(
                     (
-                        asm.Assign(var, asm.Immediate(np.int64(5))),
+                        asm.Assign(var, asm.Literal(np.int64(5))),
                         asm.If(
                             asm.Call(
-                                asm.Immediate(operator.eq),
-                                (var, asm.Immediate(np.int64(5))),
+                                asm.Literal(operator.eq),
+                                (var, asm.Literal(np.int64(5))),
                             ),
                             asm.Block(
                                 (
                                     asm.Assign(
                                         var,
                                         asm.Call(
-                                            asm.Immediate(operator.add),
-                                            (var, asm.Immediate(np.int64(10))),
+                                            asm.Literal(operator.add),
+                                            (var, asm.Literal(np.int64(10))),
                                         ),
                                     ),
                                 )
@@ -240,16 +249,16 @@ def test_if_statement(compiler, buffer):
                         ),
                         asm.IfElse(
                             asm.Call(
-                                asm.Immediate(operator.lt),
-                                (var, asm.Immediate(np.int64(15))),
+                                asm.Literal(operator.lt),
+                                (var, asm.Literal(np.int64(15))),
                             ),
                             asm.Block(
                                 (
                                     asm.Assign(
                                         var,
                                         asm.Call(
-                                            asm.Immediate(operator.sub),
-                                            (var, asm.Immediate(np.int64(3))),
+                                            asm.Literal(operator.sub),
+                                            (var, asm.Literal(np.int64(3))),
                                         ),
                                     ),
                                 )
@@ -259,8 +268,8 @@ def test_if_statement(compiler, buffer):
                                     asm.Assign(
                                         var,
                                         asm.Call(
-                                            asm.Immediate(operator.mul),
-                                            (var, asm.Immediate(np.int64(2))),
+                                            asm.Literal(operator.mul),
+                                            (var, asm.Literal(np.int64(2))),
                                         ),
                                     ),
                                 )

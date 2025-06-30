@@ -4,6 +4,8 @@ from typing import Any
 
 import numpy as np
 
+from ..algebra.tensor import Tensor
+
 element_wise_ufunc_map = {
     np.add: operator.add,
     np.subtract: operator.sub,
@@ -12,6 +14,7 @@ element_wise_ufunc_map = {
     np.positive: operator.pos,
     np.absolute: operator.abs,
     np.abs: operator.abs,
+    np.bitwise_invert: operator.invert,
     np.bitwise_and: operator.and_,
     np.bitwise_or: operator.or_,
     np.bitwise_xor: operator.xor,
@@ -21,6 +24,19 @@ element_wise_ufunc_map = {
     np.floor_divide: operator.floordiv,
     np.mod: operator.mod,
     np.pow: operator.pow,
+    np.sin: np.sin,
+    np.sinh: np.sinh,
+    np.cos: np.cos,
+    np.cosh: np.cosh,
+    np.tan: np.tan,
+    np.tanh: np.tanh,
+    np.asin: np.asin,
+    np.asinh: np.asinh,
+    np.acos: np.acos,
+    np.acosh: np.acosh,
+    np.atan: np.atan,
+    np.atanh: np.atanh,
+    np.atan2: np.atan2,
     # Add more ufuncs as needed
 }
 
@@ -29,7 +45,7 @@ ufunc_map: dict[Any, Any] = {
 }
 
 
-class OverrideTensor(ABC):
+class OverrideTensor(Tensor, ABC):
     @abstractmethod
     def override_module(self):
         """Return the module that implements the override logic."""

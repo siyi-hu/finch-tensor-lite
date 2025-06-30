@@ -2,28 +2,30 @@ import builtins
 import operator
 import sys
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass
 from itertools import accumulate, zip_longest
 from typing import Any
 
 import numpy as np
-from numpy.core.numeric import normalize_axis_tuple
+from numpy.lib.array_utils import normalize_axis_tuple
 
-from ..algebra import conjugate as conj
 from ..algebra import (
+    TensorFormat,
     element_type,
     fill_value,
     fixpoint_type,
     init_value,
     promote_max,
     promote_min,
+    query_property,
+    register_property,
     return_type,
 )
+from ..algebra import conjugate as conj
 from ..finch_logic import (
     Aggregate,
     Alias,
     Field,
-    Immediate,
+    Literal,
     LogicNode,
     MapJoin,
     Relabel,
@@ -40,37 +42,86 @@ def identify(data):
     return Subquery(lhs, data)
 
 
-@dataclass
+class LazyTensorFormat(TensorFormat):
+    _fill_value: Any
+    _element_type: Any
+    _shape_type: Any
+
+    def __init__(self, _fill_value: Any, _element_type: Any, _shape_type: tuple):
+        self._fill_value = _fill_value
+        self._element_type = _element_type
+        self._shape_type = _shape_type
+
+    def __eq__(self, other):
+        if not isinstance(other, LazyTensorFormat):
+            return False
+        return (
+            self._fill_value == other._fill_value
+            and self._element_type == other._element_type
+            and self._shape_type == other._shape_type
+        )
+
+    def __hash__(self):
+        return hash((self._fill_value, self._element_type, self._shape_type))
+
+    @property
+    def fill_value(self):
+        return self._fill_value
+
+    @property
+    def element_type(self):
+        return self._element_type
+
+    @property
+    def shape_type(self):
+        return self._shape_type
+
+
 class LazyTensor(OverrideTensor):
-    data: LogicNode
-    shape: tuple
-    fill_value: Any
-    element_type: Any
+    def __init__(
+        self, data: LogicNode, shape: tuple, fill_value: Any, element_type: Any
+    ):
+        self.data = data
+        self._shape = shape
+        self._fill_value = fill_value
+        self._element_type = element_type
+
+    @property
+    def format(self):
+        return LazyTensorFormat(
+            _fill_value=self._fill_value,
+            _element_type=self._element_type,
+            _shape_type=tuple(type(dim) for dim in self.shape),
+        )
+
+    @property
+    def shape(self) -> tuple:
+        """
+        Returns the shape of the LazyTensor as a tuple.
+        The shape is determined by the data and is a static property.
+        """
+        return self._shape
 
     def override_module(self):
         return sys.modules[__name__]
 
-    @property
-    def ndim(self) -> int:
-        return len(self.shape)
-
     def __add__(self, other):
-        return add(self, defer(other))
+        return add(self, other)
 
     def __radd__(self, other):
-        return add(defer(other), self)
+        return add(other, self)
 
     def __sub__(self, other):
-        return subtract(self, defer(other))
+        return subtract(self, other)
 
     def __rsub__(self, other):
-        return subtract(defer(other), self)
+        return subtract(other, self)
 
     def __mul__(self, other):
-        return multiply(self, defer(other))
+        return multiply(self, other)
 
     def __rmul__(self, other):
-        return multiply(defer(other), self)
+        return multiply(other, self)
 
     def __abs__(self):
         return abs(self)
@@ -82,64 +133,106 @@ class LazyTensor(OverrideTensor):
         return negative(self)
 
     def __and__(self, other):
-        return bitwise_and(self, defer(other))
+        return bitwise_and(self, other)
 
     def __rand__(self, other):
-        return bitwise_and(defer(other), self)
+        return bitwise_and(other, self)
 
     def __lshift__(self, other):
-        return bitwise_left_shift(self, defer(other))
+        return bitwise_left_shift(self, other)
 
     def __rlshift__(self, other):
-        return bitwise_left_shift(defer(other), self)
+        return bitwise_left_shift(other, self)
 
     def __or__(self, other):
-        return bitwise_or(self, defer(other))
+        return bitwise_or(self, other)
 
     def __ror__(self, other):
-        return bitwise_or(defer(other), self)
+        return bitwise_or(other, self)
 
     def __rshift__(self, other):
-        return bitwise_right_shift(self, defer(other))
+        return bitwise_right_shift(self, other)
 
     def __rrshift__(self, other):
-        return bitwise_right_shift(defer(other), self)
+        return bitwise_right_shift(other, self)
 
     def __xor__(self, other):
-        return bitwise_xor(self, defer(other))
+        return bitwise_xor(self, other)
 
     def __rxor__(self, other):
-        return bitwise_xor(defer(other), self)
+        return bitwise_xor(other, self)
+
+    def __invert__(self):
+        return bitwise_inverse(self)
 
     def __truediv__(self, other):
-        return truediv(self, defer(other))
+        return truediv(self, other)
 
     def __rtruediv__(self, other):
-        return truediv(defer(other), self)
+        return truediv(other, self)
 
     def __floordiv__(self, other):
-        return floordiv(self, defer(other))
+        return floordiv(self, other)
 
     def __rfloordiv__(self, other):
-        return floordiv(defer(other), self)
+        return floordiv(other, self)
 
     def __mod__(self, other):
-        return mod(self, defer(other))
+        return mod(self, other)
 
     def __rmod__(self, other):
-        return mod(defer(other), self)
+        return mod(other, self)
 
     def __pow__(self, other):
-        return pow(self, defer(other))
+        return pow(self, other)
 
     def __rpow__(self, other):
-        return pow(defer(other), self)
+        return pow(other, self)
 
     def __matmul__(self, other):
-        return matmul(self, defer(other))
+        return matmul(self, other)
 
     def __rmatmul__(self, other):
-        return matmul(defer(other), self)
+        return matmul(other, self)
+
+    def __sin__(self):
+        return sin(self)
+
+    def __sinh__(self):
+        return sinh(self)
+
+    def __cos__(self):
+        return cos(self)
+
+    def __cosh__(self):
+        return cosh(self)
+
+    def __tan__(self):
+        return tan(self)
+
+    def __tanh__(self):
+        return tanh(self)
+
+    def __asin__(self):
+        return asin(self)
+
+    def __asinh__(self):
+        return asinh(self)
+
+    def __acos__(self):
+        return acos(self)
+
+    def __acosh__(self):
+        return acosh(self)
+
+    def __atan__(self):
+        return atan(self)
+
+    def __atanh__(self):
+        return atanh(self)
+
+    def __atan2__(self, other):
+        return atan2(self, other)
 
     # raise ValueError for unsupported operations according to the data-apis spec.
     # NOT tested, since this isn't necessary as it will throw an error anyways.
@@ -180,6 +273,29 @@ class LazyTensor(OverrideTensor):
         )
 
 
+register_property(np.ndarray, "asarray", "__attr__", lambda x: x)
+register_property(LazyTensor, "asarray", "__attr__", lambda x: x)
+
+
+def asarray(arg: Any) -> Any:
+    """Convert given argument and return np.asarray(arg) for the scalar type input.
+    If input argument is already array type, return unchanged.
+
+    Args:
+        arg: The object to be converted.
+
+    Returns:
+        The array type result of the given object.
+    """
+    if hasattr(arg, "asarray"):
+        return arg.asarray()
+
+    try:
+        return query_property(arg, "asarray", "__attr__")
+    except AttributeError:
+        return np.asarray(arg)
+
+
 def defer(arr) -> LazyTensor:
     """
     - defer(arr) -> LazyTensor:
@@ -195,10 +311,11 @@ def defer(arr) -> LazyTensor:
     """
     if isinstance(arr, LazyTensor):
         return arr
+    arr = asarray(arr)
     name = Alias(gensym("A"))
     idxs = tuple(Field(gensym("i")) for _ in range(arr.ndim))
     shape = tuple(arr.shape)
-    tns = Subquery(name, Table(Immediate(arr), idxs))
+    tns = Subquery(name, Table(Literal(arr), idxs))
     return LazyTensor(tns, shape, fill_value(arr), element_type(arr))
 
 
@@ -399,8 +516,8 @@ def reduce(
     shape = tuple(x.shape[n] for n in range(x.ndim) if n not in axis)
     fields = tuple(Field(gensym("i")) for _ in range(x.ndim))
     data: LogicNode = Aggregate(
-        Immediate(op),
-        Immediate(init),
+        Literal(op),
+        Literal(init),
         Relabel(x.data, fields),
         tuple(fields[i] for i in axis),
     )
@@ -463,7 +580,7 @@ def elementwise(f: Callable, *args) -> LazyTensor:
                     raise ValueError("Invalid shape for broadcasting")
                 idims.append(Field(gensym("j")))
         bargs.append(Reorder(Relabel(arg.data, tuple(idims)), tuple(odims)))
-    data = Reorder(MapJoin(Immediate(f), tuple(bargs)), idxs)
+    data = Reorder(MapJoin(Literal(f), tuple(bargs)), idxs)
     new_fill_value = f(*[x.fill_value for x in args])
     new_element_type = return_type(f, *[x.element_type for x in args])
     return LazyTensor(identify(data), shape, new_fill_value, new_element_type)
@@ -671,6 +788,10 @@ def matrix_transpose(x) -> LazyTensor:
     return permute_dims(x, axis=(*range(x.ndim - 2), x.ndim - 1, x.ndim - 2))
 
 
+def bitwise_inverse(x) -> LazyTensor:
+    return elementwise(operator.invert, defer(x))
+
+
 def bitwise_and(x1, x2) -> LazyTensor:
     return elementwise(operator.and_, defer(x1), defer(x2))
 
@@ -809,6 +930,58 @@ def vecdot(x1, x2, /, *, axis=-1) -> LazyTensor:
         multiply(conjugate(x1), x2),
         axis=axis,
     )
+
+
+def sin(x) -> LazyTensor:
+    return elementwise(np.sin, defer(x))
+
+
+def sinh(x) -> LazyTensor:
+    return elementwise(np.sinh, defer(x))
+
+
+def cos(x) -> LazyTensor:
+    return elementwise(np.cos, defer(x))
+
+
+def cosh(x) -> LazyTensor:
+    return elementwise(np.cosh, defer(x))
+
+
+def tan(x) -> LazyTensor:
+    return elementwise(np.tan, defer(x))
+
+
+def tanh(x) -> LazyTensor:
+    return elementwise(np.tanh, defer(x))
+
+
+def asin(x) -> LazyTensor:
+    return elementwise(np.asin, defer(x))
+
+
+def asinh(x) -> LazyTensor:
+    return elementwise(np.asinh, defer(x))
+
+
+def acos(x) -> LazyTensor:
+    return elementwise(np.acos, defer(x))
+
+
+def acosh(x) -> LazyTensor:
+    return elementwise(np.acosh, defer(x))
+
+
+def atan(x) -> LazyTensor:
+    return elementwise(np.atan, defer(x))
+
+
+def atanh(x) -> LazyTensor:
+    return elementwise(np.atanh, defer(x))
+
+
+def atan2(x1, x2) -> LazyTensor:
+    return elementwise(np.atan2, defer(x1), defer(x2))
 
 
 def _fill_array(value, shape: tuple[int, ...]):
