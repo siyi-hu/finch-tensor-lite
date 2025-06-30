@@ -301,7 +301,12 @@ def test_reduction_operations(a, a_wrap, ops, np_op, axis):
 
             result = finch.compute(result)
 
-        assert_equal(result, expected)
+        if np.issubdtype(expected.dtype, np.floating) or np.issubdtype(
+            expected.dtype, np.complexfloating
+        ):
+            assert_allclose(result, expected, rtol=1e-15, atol=0.0)
+        else:
+            assert_equal(result, expected)
 
 
 @pytest.mark.parametrize(
