@@ -1,5 +1,9 @@
 import pytest
 
+import numpy as np
+from numpy.testing import assert_equal
+
+from finch import sum
 from finch.autoschedule._utils import intersect, is_subsequence, with_subsequence
 from finch.finch_logic import Field
 
@@ -39,3 +43,15 @@ def test_is_subsequence(tp_0, tp_1, tp_2, tp_3):
     assert not is_subsequence(tp_2, tp_1)
     assert is_subsequence(tp_0, tp_1)
     assert not is_subsequence(tp_3, tp_1)
+
+
+@pytest.mark.parametrize(
+    "a",
+    [
+        (np.array([[1, 2], [3, 4]])),
+    ],
+)
+def test_keepdims(a):
+    result = sum(a, axis=0, keepdims=True)
+    expected = np.sum(a, axis=0, keepdims=True)
+    assert_equal(result, expected)

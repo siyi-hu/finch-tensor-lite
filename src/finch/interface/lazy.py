@@ -523,10 +523,10 @@ def reduce(
     )
     if keepdims:
         keeps = tuple(
-            fields[i] if i in axis else Field(gensym("j")) for i in range(x.ndim)
+            fields[i] if i not in axis else Field(gensym("j")) for i in range(x.ndim)
         )
         data = Reorder(data, keeps)
-        shape = tuple(shape[i] if i in axis else 1 for i in range(x.ndim))
+        shape = tuple(x.shape[i] if i not in axis else 1 for i in range(x.ndim))
     if dtype is None:
         dtype = fixpoint_type(op, init, x.element_type)
     return LazyTensor(identify(data), shape, init, dtype)
