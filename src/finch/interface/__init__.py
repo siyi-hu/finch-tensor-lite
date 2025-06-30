@@ -64,8 +64,6 @@ __all__ = [
     "acosh",
     "add",
     "all",
-    "all",
-    "any",
     "any",
     "asarray",
     "asin",

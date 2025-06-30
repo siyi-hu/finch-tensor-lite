@@ -274,6 +274,9 @@ def test_unary_operations(a, a_wrap, ops, np_op):
         ((finch.all, np.all), np.all),
         ((finch.min, np.min), np.min),
         ((finch.max, np.max), np.max),
+        ((finch.mean, np.mean), np.mean),
+        ((finch.std, np.std), np.std),
+        ((finch.var, np.var), np.var),
     ],
 )
 @pytest.mark.parametrize(

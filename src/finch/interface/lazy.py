@@ -523,7 +523,7 @@ def reduce(
     )
     if keepdims:
         keeps = tuple(
-            fields[i] if i in axis else Field(gensym("j")) for i in range(x.ndim)
+            fields[i] if i not in axis else Field(gensym("j")) for i in range(x.ndim)
         )
         data = Reorder(data, keeps)
         shape = tuple(x.shape[i] if i not in axis else 1 for i in range(x.ndim))
@@ -984,20 +984,17 @@ def atan2(x1, x2) -> LazyTensor:
     return elementwise(np.atan2, defer(x1), defer(x2))
 
 
-def _fill_array(value, shape: tuple[int, ...]):
-    if not shape:
-        return value
-    size, *rest = shape
-    return np.array([_fill_array(value, tuple(rest)) for _ in range(size)])
-
-
 def mean(x, /, *, axis: int | tuple[int, ...] | None = None, keepdims: bool = False):
     """
     Calculates the arithmetic mean of the input array ``x``.
     """
     x = defer(x)
+    n = (
+        np.prod(tuple(x.shape[i] for i in range(x.ndim) if i in axis))
+        if isinstance(axis, tuple)
+        else (np.prod(x.shape) if axis is None else x.shape[axis])
+    )
     s = sum(x, axis=axis, keepdims=keepdims)
-    n = defer(_fill_array(x.shape[axis], s.shape))
     return truediv(s, n)
 
 
@@ -1013,10 +1010,13 @@ def var(
     Calculates the variance of the input array ``x``.
     """
     x = defer(x)
-    m = mean(x, axis=axis, keepdims=False)
-    d = subtract(x, m)
-    n = defer(_fill_array((x.shape[axis] - correction), x.shape))
-    v = truediv(pow(d, defer(_fill_array(2.0, d.shape))), n)
+    n = (
+        np.prod(tuple(x.shape[i] for i in range(x.ndim) if i in axis))
+        if isinstance(axis, tuple)
+        else (np.prod(x.shape) if axis is None else x.shape[axis])
+    )
+    m = mean(x, axis=axis, keepdims=True)
+    v = truediv(pow(x - m, 2.0), (n - correction))
     return sum(v, axis=axis, keepdims=keepdims)
 
 
@@ -1033,4 +1033,4 @@ def std(
     """
     x = defer(x)
     d = var(x, axis=axis, correction=correction, keepdims=keepdims)
-    return pow(d, _fill_array(0.5, d.shape))
+    return pow(d, 0.5)
