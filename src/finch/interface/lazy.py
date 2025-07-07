@@ -459,6 +459,19 @@ def squeeze(
     return LazyTensor(data_2, shape_2, x.fill_value, x.element_type)
 
 
+def pairwise_indices(x, /, *, axis: int | None = None):
+    x = defer(x)
+    if axis is None:
+        axis = tuple(range(x.ndim))
+
+    fields = tuple(Field(gensym("i")) for _ in range(x.ndim))
+    data: LogicNode = Aggregate(
+        Relabel(x.data, fields),
+        tuple(fields[i] for i in axis),
+    )
+    return LazyTensor(identify(data), x.shape, None, None)
+
+
 def reduce(
     op: Callable,
     x,
@@ -1038,47 +1051,23 @@ def std(
     return pow(d, 0.5)
 
 
-def argmin(
-    x,
-    /,
-    *,
-    axis: int | tuple[int, ...] | None = None,
-    keepdims: bool = False,
-    init=None,
-):
+def argmin(x, /, *, axis: int | None = None, keepdims: bool = False, init=None):
     """
     Returns the indices of the minimum values in input array ``x`` along given axis.
     """
-    # axis should only be int or None
     if isinstance(axis, tuple):
         raise ValueError("Type of axis should is only allowed to be int or None.")
 
-    x = defer(x)
-    indices = np.indices(x.shape)
-    vec = np.vectorize(lambda v, *idx: (v, idx[axis]), otypes=[object])
-    paired = vec(x, *indices)
-
-    return reduce(minby, paired.flat, axis=axis, keepdims=keepdims, init=init)
+    x = pairwise_indices(x, axis=axis)
+    return reduce(minby, x, axis=axis, keepdims=keepdims, init=init)
 
 
-def argmax(
-    x,
-    /,
-    *,
-    axis: int | tuple[int, ...] | None = None,
-    keepdims: bool = False,
-    init=None,
-):
+def argmax(x, /, *, axis: int | None = None, keepdims: bool = False, init=None):
     """
     Returns the indices of the maximum values in input array ``x`` along given axis.
     """
-    # axis should only be int or None
     if isinstance(axis, tuple):
         raise ValueError("Type of axis should is only allowed to be int or None.")
 
-    x = defer(x)
-    indices = np.indices(x.shape)
-    vec = np.vectorize(lambda v, *idx: (v, idx[axis]), otypes=[object])
-    paired = vec(x, *indices)
-
-    return reduce(maxby, paired.flat, axis=axis, keepdims=keepdims, init=init)
+    x = pairwise_indices(x, axis=axis)
+    return reduce(maxby, x, axis=axis, keepdims=keepdims, init=init)

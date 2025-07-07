@@ -687,3 +687,19 @@ def test_scalar_coerce(x, func):
     assert isinstance(result, func), f"Result should be of type {func.__name__}"
     works = result == expected or np.isnan(result) and np.isnan(expected)
     assert works, f"Expected {expected}, got {result}"
+
+
+@pytest.mark.parametrize(
+    "a",
+    [
+        # (np.array([[True, False, True, False], [False, False, False, False]])),
+        (np.array([[1, 2], [3, 4]])),
+        # (np.array([[2, 0], [1, 3]])),
+        # (np.array([[1.00002, -12.618, 0, 0.001], [-1.414, -5.01, 0, 0]])),
+        # (np.array([[0, 0.618, 0, 0.001], [0, 0.01, 0, 0]])),
+        # (np.array([[10000.0, 1.0, -89.0, 78], [401.0, 3, 5, 10.2]])),
+    ],
+)
+def test_argmin(a):
+    result = finch.argmin(a, axis=0)
+    print(result)
