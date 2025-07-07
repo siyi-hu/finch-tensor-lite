@@ -14,6 +14,8 @@ from ..algebra import (
     fill_value,
     fixpoint_type,
     init_value,
+    maxby,
+    minby,
     promote_max,
     promote_min,
     query_property,
@@ -1034,3 +1036,49 @@ def std(
     x = defer(x)
     d = var(x, axis=axis, correction=correction, keepdims=keepdims)
     return pow(d, 0.5)
+
+
+def argmin(
+    x,
+    /,
+    *,
+    axis: int | tuple[int, ...] | None = None,
+    keepdims: bool = False,
+    init=None,
+):
+    """
+    Returns the indices of the minimum values in input array ``x`` along given axis.
+    """
+    # axis should only be int or None
+    if isinstance(axis, tuple):
+        raise ValueError("Type of axis should is only allowed to be int or None.")
+
+    x = defer(x)
+    indices = np.indices(x.shape)
+    vec = np.vectorize(lambda v, *idx: (v, idx[axis]), otypes=[object])
+    paired = vec(x, *indices)
+
+    return reduce(minby, paired.flat, axis=axis, keepdims=keepdims, init=init)
+
+
+def argmax(
+    x,
+    /,
+    *,
+    axis: int | tuple[int, ...] | None = None,
+    keepdims: bool = False,
+    init=None,
+):
+    """
+    Returns the indices of the maximum values in input array ``x`` along given axis.
+    """
+    # axis should only be int or None
+    if isinstance(axis, tuple):
+        raise ValueError("Type of axis should is only allowed to be int or None.")
+
+    x = defer(x)
+    indices = np.indices(x.shape)
+    vec = np.vectorize(lambda v, *idx: (v, idx[axis]), otypes=[object])
+    paired = vec(x, *indices)
+
+    return reduce(maxby, paired.flat, axis=axis, keepdims=keepdims, init=init)

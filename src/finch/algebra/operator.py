@@ -27,6 +27,18 @@ def promote_max(a, b):
     return max(cast(a), cast(b))
 
 
+def minby(a, b):
+    # Both a and b should be the tuple of (value, index)
+    cast = algebra.promote_type(a[0], b[0])
+    return a[1] if cast(a[0]) < cast(b[0]) else b[1]
+
+
+def maxby(a, b):
+    # Both a and b should be the tuple of (value, index)
+    cast = algebra.promote_type(a[0], b[0])
+    return a[1] if cast(a[0]) > cast(b[0]) else b[1]
+
+
 def conjugate(x):
     """
     Computes the complex conjugate of the input number
@@ -116,3 +128,10 @@ algebra.register_property(
     "return_type",
     lambda op, x, y: y,
 )
+
+
+algebra.register_property(minby, "__call__", "return_type", lambda op, a, b: int)
+algebra.register_property(maxby, "__call__", "return_type", lambda op, a, b: int)
+
+algebra.register_property(minby, "__call__", "init_value", lambda op, arg: 0)
+algebra.register_property(maxby, "__call__", "init_value", lambda op, arg: 0)

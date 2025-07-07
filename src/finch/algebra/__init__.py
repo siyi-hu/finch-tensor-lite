@@ -13,6 +13,8 @@ from .algebra import (
 from .operator import (
     InitWrite,
     conjugate,
+    maxby,
+    minby,
     overwrite,
     promote_max,
     promote_min,
@@ -39,6 +41,8 @@ __all__ = [
     "is_associative",
     "is_distributive",
     "is_identity",
+    "maxby",
+    "minby",
     "overwrite",
     "promote_max",
     "promote_min",
