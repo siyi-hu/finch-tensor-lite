@@ -1694,7 +1694,8 @@ def argmin(x, /, *, axis: int | None = None, keepdims: bool = False, init=None):
         raise ValueError("Type of axis should is only allowed to be int or None.")
 
     indices = np.indices(x.shape)
-    x = pairwise_indices(x, indices)
+    paired_tensor = pairwise_indices(x, indices)
+    x = elementwise(identity, defer(paired_tensor))
     return reduce(minby, x, axis=axis, keepdims=keepdims, init=init)
 
 
@@ -1706,5 +1707,6 @@ def argmax(x, /, *, axis: int | None = None, keepdims: bool = False, init=None):
         raise ValueError("Type of axis should is only allowed to be int or None.")
 
     indices = np.indices(x.shape)
-    x = pairwise_indices(x, indices)
+    paired_tensor = pairwise_indices(x, indices)
+    x = elementwise(identity, defer(paired_tensor))
     return reduce(maxby, x, axis=axis, keepdims=keepdims, init=init)
