@@ -1,5 +1,7 @@
 from typing import Any
 
+import numpy as np
+
 from . import algebra
 
 
@@ -38,17 +40,22 @@ class Pair:
         self.index = index
 
 
-algebra.register_property(Pair, "asarray", "__attr__", lambda x: x)
-
-
 def minby(a: Pair, b: Pair):
+    # init_value case
+    if not isinstance(a, Pair):
+        return b
+
     cast = algebra.promote_type(a.value, b.value)
-    return a.index if cast(a.value) < cast(b.value) else b.index
+    return a if cast(a.value) <= cast(b.value) else b
 
 
 def maxby(a: Pair, b: Pair):
+    # init_value case
+    if not isinstance(a, Pair):
+        return b
+
     cast = algebra.promote_type(a.value, b.value)
-    return a.index if cast(a.value) > cast(b.value) else b.index
+    return a if cast(a.value) >= cast(b.value) else b
 
 
 def conjugate(x):
@@ -173,8 +180,8 @@ algebra.register_property(
 )
 
 
-algebra.register_property(minby, "__call__", "return_type", lambda op, a, b: int)
-algebra.register_property(maxby, "__call__", "return_type", lambda op, a, b: int)
+algebra.register_property(minby, "__call__", "return_type", lambda op, a, b: Pair)
+algebra.register_property(maxby, "__call__", "return_type", lambda op, a, b: Pair)
 
-algebra.register_property(minby, "__call__", "init_value", lambda op, arg: 0)
-algebra.register_property(maxby, "__call__", "init_value", lambda op, arg: 0)
+algebra.register_property(minby, "__call__", "init_value", lambda op, arg: np.inf)
+algebra.register_property(maxby, "__call__", "init_value", lambda op, arg: -np.inf)

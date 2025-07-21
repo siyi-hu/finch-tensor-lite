@@ -1186,14 +1186,24 @@ def test_flatten(array_shape, expected_shape, wrapper):
 @pytest.mark.parametrize(
     "a",
     [
-        # (np.array([[True, False, True, False], [False, False, False, False]])),
+        (np.array([[True, False, True, False], [False, False, False, False]])),
         (np.array([[1, 2], [3, 4]])),
-        # (np.array([[2, 0], [1, 3]])),
-        # (np.array([[1.00002, -12.618, 0, 0.001], [-1.414, -5.01, 0, 0]])),
-        # (np.array([[0, 0.618, 0, 0.001], [0, 0.01, 0, 0]])),
-        # (np.array([[10000.0, 1.0, -89.0, 78], [401.0, 3, 5, 10.2]])),
+        (np.array([[2, 0], [1, 3]])),
+        (np.array([[1.00002, -12.618, 0, 0.001], [-1.414, -5.01, 0, 0]])),
+        (np.array([[0, 0.618, 0, 0.001], [0, 0.01, 0, 0]])),
+        (np.array([[10000.0, 1.0, -89.0, 78], [401.0, 3, 5, 10.2]])),
+        (np.array([[[2, 4, 6, 8], [1, 3, 5, 7]], [[0, 1, 9, 10], [14, 31, 5, 77]]])),
     ],
 )
 def test_argmin(a):
     result = finch.argmin(a, axis=0)
-    print(result)
+    expected = np.argmin(a, axis=0)
+    assert_equal(result, expected)
+
+    result = finch.argmin(a, axis=1)
+    expected = np.argmin(a, axis=1)
+    assert_equal(result, expected)
+
+    # result = finch.argmin(a, axis=None)
+    # expected = np.argmin(a, axis=None)
+    # assert_equal(result, expected)
