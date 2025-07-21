@@ -486,17 +486,26 @@ def squeeze(
     return LazyTensor(data_2, shape_2, x.fill_value, x.element_type)
 
 
-def pairwise_indices(x, /, *, axis: int | None = None):
-    x = defer(x)
-    if axis is None:
-        axis = tuple(range(x.ndim))
-
-    fields = tuple(Field(gensym("i")) for _ in range(x.ndim))
-    data: LogicNode = Aggregate(
-        Relabel(x.data, fields),
-        tuple(fields[i] for i in axis),
-    )
-    return LazyTensor(identify(data), x.shape, None, None)
+def pairwise_indices(x, indices):
+    args = tuple(defer(a) for a in indices)
+    ndim = x.ndim
+    shape = x.shape
+    idxs = tuple(Field(gensym("i")) for _ in range(ndim))
+    bargs = []
+    for arg in args:
+        idims = []
+        odims = []
+        for i in range(ndim - arg.ndim, ndim):
+            if arg.shape[i - ndim + arg.ndim] == shape[i]:
+                idims.append(idxs[i])
+                odims.append(idxs[i])
+            else:
+                if arg.shape[i - ndim + arg.ndim] != 1:
+                    raise ValueError("Invalid shape for broadcasting")
+                idims.append(Field(gensym("j")))
+        bargs.append(Reorder(Relabel(arg.data, tuple(idims)), tuple(odims)))
+    data = Reorder(MapJoin(tuple(bargs)), idxs)
+    return LazyTensor(identify(data), shape, None, element_type(x))
 
 
 def reduce(
@@ -1121,7 +1130,8 @@ def argmin(x, /, *, axis: int | None = None, keepdims: bool = False, init=None):
     if isinstance(axis, tuple):
         raise ValueError("Type of axis should is only allowed to be int or None.")
 
-    x = pairwise_indices(x, axis=axis)
+    indices = np.indices(x.shape)
+    x = pairwise_indices(x, indices)
     return reduce(minby, x, axis=axis, keepdims=keepdims, init=init)
 
 
@@ -1132,5 +1142,6 @@ def argmax(x, /, *, axis: int | None = None, keepdims: bool = False, init=None):
     if isinstance(axis, tuple):
         raise ValueError("Type of axis should is only allowed to be int or None.")
 
-    x = pairwise_indices(x, axis=axis)
+    indices = np.indices(x.shape)
+    x = pairwise_indices(x, indices)
     return reduce(maxby, x, axis=axis, keepdims=keepdims, init=init)

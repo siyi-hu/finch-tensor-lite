@@ -12,6 +12,7 @@ from .algebra import (
 )
 from .operator import (
     InitWrite,
+    Pair,
     conjugate,
     maxby,
     minby,
@@ -29,6 +30,7 @@ from .tensor import (
 
 __all__ = [
     "InitWrite",
+    "Pair",
     "StableNumber",
     "Tensor",
     "TensorFormat",

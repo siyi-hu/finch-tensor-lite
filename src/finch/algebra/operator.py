@@ -1,3 +1,5 @@
+from typing import Any
+
 from . import algebra
 
 
@@ -27,16 +29,26 @@ def promote_max(a, b):
     return max(cast(a), cast(b))
 
 
-def minby(a, b):
-    # Both a and b should be the tuple of (value, index)
-    cast = algebra.promote_type(a[0], b[0])
-    return a[1] if cast(a[0]) < cast(b[0]) else b[1]
+class Pair:
+    value: Any
+    index: int
+
+    def __init__(self, value, index):
+        self.value = value
+        self.index = index
 
 
-def maxby(a, b):
-    # Both a and b should be the tuple of (value, index)
-    cast = algebra.promote_type(a[0], b[0])
-    return a[1] if cast(a[0]) > cast(b[0]) else b[1]
+algebra.register_property(Pair, "asarray", "__attr__", lambda x: x)
+
+
+def minby(a: Pair, b: Pair):
+    cast = algebra.promote_type(a.value, b.value)
+    return a.index if cast(a.value) < cast(b.value) else b.index
+
+
+def maxby(a: Pair, b: Pair):
+    cast = algebra.promote_type(a.value, b.value)
+    return a.index if cast(a.value) > cast(b.value) else b.index
 
 
 def conjugate(x):
