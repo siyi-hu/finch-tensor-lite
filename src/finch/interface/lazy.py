@@ -493,28 +493,6 @@ def squeeze(
     return LazyTensor(data_2, shape_2, x.fill_value, x.element_type)
 
 
-# def pairwise_indices(x, indices):
-#     args = tuple(defer(a) for a in indices)
-#     ndim = x.ndim
-#     shape = x.shape
-#     idxs = tuple(Field(gensym("i")) for _ in range(ndim))
-#     bargs = []
-#     for arg in args:
-#         idims = []
-#         odims = []
-#         for i in range(ndim - arg.ndim, ndim):
-#             if arg.shape[i - ndim + arg.ndim] == shape[i]:
-#                 idims.append(idxs[i])
-#                 odims.append(idxs[i])
-#             else:
-#                 if arg.shape[i - ndim + arg.ndim] != 1:
-#                     raise ValueError("Invalid shape for broadcasting")
-#                 idims.append(Field(gensym("j")))
-#         bargs.append(Reorder(Relabel(arg.data, tuple(idims)), tuple(odims)))
-#     data = Reorder(MapJoin(tuple(bargs)), idxs)
-#     return LazyTensor(identify(data), shape, None, element_type(x))
-
-
 def reduce(
     op: Callable,
     x,
