@@ -1696,22 +1696,25 @@ def argmin(x, /, *, axis: int | None = None, keepdims: bool = False, init=None):
 
     x = defer(x)
     computed_x = _compute(x)
+    if hasattr(computed_x, "to_numpy") and callable(computed_x.to_numpy):
+        computed_x = computed_x.to_numpy()
 
     # Pairwise tensor with indices
     if axis is None:
-        indices = np.arange(computed_x.size).reshape(x.shape)
-        pairwise = np.vectorize(lambda tns, *idx: Pair(tns, idx), otypes=[Pair])
+        indices = np.arange(np.prod(x.shape)).reshape(x.shape)
+        pairwise = np.vectorize(lambda tns, idx: Pair(tns, idx), otypes=[Pair])
+        paired_tensor = pairwise(computed_x, indices)
     else:
         indices = np.indices(x.shape)
         pairwise = np.vectorize(lambda tns, *idx: Pair(tns, idx[axis]), otypes=[Pair])
-    paired_tensor = pairwise(computed_x, *indices)
+        paired_tensor = pairwise(computed_x, *indices)
 
     # Calculate argmin and unpair to return the indices
     res = _compute(
         reduce(minby, defer(paired_tensor), axis=axis, keepdims=keepdims, init=init)
     )
-    res = np.vectorize(lambda tns: tns.index, otypes=[Pair])(res)
-    return elementwise(identity, defer(res[1] if axis is None else res))
+    unpair = np.vectorize(lambda tns: tns.index, otypes=[Pair])
+    return elementwise(identity, defer(unpair(res)))
 
 
 def argmax(x, /, *, axis: int | None = None, keepdims: bool = False, init=None):
@@ -1721,4 +1724,24 @@ def argmax(x, /, *, axis: int | None = None, keepdims: bool = False, init=None):
     if isinstance(axis, tuple):
         raise ValueError("Type of axis should is only allowed to be int or None.")
 
-    return reduce(maxby, x, axis=axis, keepdims=keepdims, init=init)
+    x = defer(x)
+    computed_x = _compute(x)
+    if hasattr(computed_x, "to_numpy") and callable(computed_x.to_numpy):
+        computed_x = computed_x.to_numpy()
+
+    # Pairwise tensor with indices
+    if axis is None:
+        indices = np.arange(np.prod(x.shape)).reshape(x.shape)
+        pairwise = np.vectorize(lambda tns, idx: Pair(tns, idx), otypes=[Pair])
+        paired_tensor = pairwise(computed_x, indices)
+    else:
+        indices = np.indices(x.shape)
+        pairwise = np.vectorize(lambda tns, *idx: Pair(tns, idx[axis]), otypes=[Pair])
+        paired_tensor = pairwise(computed_x, *indices)
+
+    # Calculate argmin and unpair to return the indices
+    res = _compute(
+        reduce(maxby, defer(paired_tensor), axis=axis, keepdims=keepdims, init=init)
+    )
+    unpair = np.vectorize(lambda tns: tns.index, otypes=[Pair])
+    return elementwise(identity, defer(unpair(res)))
