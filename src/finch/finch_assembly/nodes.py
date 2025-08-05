@@ -1,9 +1,10 @@
 from abc import abstractmethod
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any
 
-from ..algebra import element_type, length_type, return_type
-from ..symbolic import Term, TermTree
+from ..algebra import return_type
+from ..symbolic import Term, TermTree, literal_repr
+from .buffer import element_type, length_type
 
 
 class AssemblyNode(Term):
@@ -66,6 +67,9 @@ class Literal(AssemblyExpression):
         """Returns the type of the expression."""
         return type(self.val)
 
+    def __repr__(self) -> str:
+        return literal_repr(type(self).__name__, asdict(self))
+
 
 @dataclass(eq=True, frozen=True)
 class Variable(AssemblyExpression):
@@ -86,6 +90,88 @@ class Variable(AssemblyExpression):
         """Returns the type of the expression."""
         return self.type
 
+    def __repr__(self) -> str:
+        return literal_repr(type(self).__name__, asdict(self))
+
+
+@dataclass(eq=True, frozen=True)
+class Stack(AssemblyExpression):
+    """
+    A logical AST expression representing an object using a set `obj` of
+    expressions, variables, and literals in the target language.
+
+    Attributes:
+        obj: The object referencing symbolic variables defined in the target language.
+        type: The type of the symbolic object.
+    """
+
+    obj: Any
+    type: Any
+
+    @property
+    def result_format(self):
+        """Returns the type of the expression."""
+        return self.type
+
+
+@dataclass(eq=True, frozen=True)
+class Slot(AssemblyExpression):
+    """
+    Represents a register to a symbolic object. Using a register in an
+    expression creates a copy of the object.
+
+    Attributes:
+        name: The name of the symbolic object to register.
+        type: The type of the symbolic object.
+    """
+
+    name: str
+    type: Any
+
+    @property
+    def result_format(self):
+        """Returns the type of the expression."""
+        return self.type
+
+
+@dataclass(eq=True, frozen=True)
+class Unpack(AssemblyTree):
+    """
+    Attempts to convert `rhs` into a symbolic, which can be registerd with
+    `lhs`. The original object must not be accessed or modified until the
+    corresponding `Repack` node is reached.
+
+    Attributes:
+        lhs: The symbolic object to write to.
+        rhs: The original object to read from.
+    """
+
+    lhs: Slot
+    rhs: AssemblyExpression
+
+    @property
+    def children(self):
+        """Returns the children of the node."""
+        return [self.lhs, self.rhs]
+
+
+@dataclass(eq=True, frozen=True)
+class Repack(AssemblyTree):
+    """
+    Registers updates from a symbolic object `val` with the original
+    object. The original object may now be accessed and modified.
+
+    Attributes:
+        slot: The symbolic object to read from.
+    """
+
+    val: Slot
+
+    @property
+    def children(self):
+        """Returns the children of the node."""
+        return [self.val]
+
 
 @dataclass(eq=True, frozen=True)
 class Assign(AssemblyTree):
@@ -98,13 +184,56 @@ class Assign(AssemblyTree):
         rhs: The right-hand side to evaluate.
     """
 
-    lhs: Variable
+    lhs: Variable | Stack
     rhs: AssemblyExpression
 
     @property
     def children(self):
         """Returns the children of the node."""
         return [self.lhs, self.rhs]
+
+
+@dataclass(eq=True, frozen=True)
+class GetAttr(AssemblyExpression, AssemblyTree):
+    """
+    Represents a getter for an attribute `attr` of an object `obj`.
+    Attributes:
+        obj: The object to get the attribute from.
+        attr: The name of the attribute to get.
+    """
+
+    obj: AssemblyExpression
+    attr: Literal
+
+    @property
+    def children(self):
+        """Returns the children of the node."""
+        return [self.obj, self.attr]
+
+    @property
+    def result_format(self):
+        """Returns the type of the expression."""
+        return dict(self.obj.result_format.struct_fields)[self.attr.val]
+
+
+@dataclass(eq=True, frozen=True)
+class SetAttr(AssemblyTree):
+    """
+    Represents a setter for an attribute `attr` of an object `obj`.
+    Attributes:
+        obj: The object to set the attribute on.
+        attr: The name of the attribute to set.
+        value: The value to set the attribute to.
+    """
+
+    obj: AssemblyExpression
+    attr: Literal
+    value: AssemblyExpression
+
+    @property
+    def children(self):
+        """Returns the children of the node."""
+        return [self.obj, self.attr, self.value]
 
 
 @dataclass(eq=True, frozen=True)

@@ -61,6 +61,7 @@ import numpy as np
 
 _properties: dict[tuple[type | Hashable, str, str], Any] = {}
 
+
 StableNumber = bool | int | float | complex | np.generic
 
 
@@ -81,14 +82,16 @@ def query_property(obj: type | Hashable, attr: str, prop: str, *args) -> Any:
         AttributeError: If the property is not implemented for the given type.
     """
     if not isinstance(obj, type):
+        # Only catch TypeError for hashability check
         try:
             hash(obj)
+        except TypeError:
+            t = type(obj)
+        else:
             query_fn = _properties.get((obj, attr, prop))
             if query_fn is not None:
                 return query_fn(obj, *args)
-        except TypeError:
-            pass
-        t = type(obj)
+            t = type(obj)
     else:
         t = obj
 
@@ -106,26 +109,34 @@ def query_property(obj: type | Hashable, attr: str, prop: str, *args) -> Any:
             msg += f"'{obj_name}' object has no attribute or property '{attr}'. "
         msg += "Hint: You may need to register the property by calling "
         if isinstance(obj, Hashable) and not isinstance(obj, type):
-            msg += f"`finch.register_property({repr(obj)}, '{attr}', '{prop}', "
-            "lambda ...)` or "
+            msg += (
+                f"`finch.register_property({repr(obj)}, '{attr}', '{prop}', "
+                "lambda ...)` or "
+            )
         msg += f"`finch.register_property({obj_name}, '{attr}', '{prop}', lambda ...)`"
         msg += f"or you may define `{obj_name}.{attr}`. "
     elif attr == "__call__":
         msg += f"function '{repr(obj)}' has no property '{prop}'. "
         msg += "Hint: You may need to register the property by calling "
         if isinstance(obj, Hashable) and not isinstance(obj, type):
-            msg += f"`finch.register_property({repr(obj)}, '{attr}', '{prop}',"
-            ", lambda ...)` or "
+            msg += (
+                f"`finch.register_property({repr(obj)}, '{attr}', '{prop}',"
+                " lambda ...)` or "
+            )
         msg += f"`finch.register_property({obj_name}, '{attr}', '{prop}', lambda ...)`."
     else:
         msg += f"attribute '{obj_name}.{attr}' has no property '{prop}'. "
         msg += "You may need to register the property by calling "
         if isinstance(obj, Hashable) and not isinstance(obj, type):
-            msg += f"finch.register_property({repr(obj)}, '{attr}', '{prop}'"
-            ", lambda ...) or "
+            msg += (
+                f"finch.register_property({repr(obj)}, '{attr}', '{prop}'"
+                ", lambda ...) or "
+            )
         msg += f"`finch.register_property({obj_name}, '{attr}', '{prop}', lambda ...)`."
-    msg += " See https://github.com/finch-tensor/finch-tensor-lite/blob/main/src/finch/"
-    "algebra/algebra.py for more information."
+    msg += (
+        " See https://github.com/finch-tensor/finch-tensor-lite/blob/main/src/finch/"
+        "algebra/algebra.py for more information."
+    )
     raise AttributeError(msg)
 
 
@@ -139,108 +150,6 @@ def register_property(cls, attr, prop, f):
             object and any additional arguments as input.
     """
     _properties[(cls, attr, prop)] = f
-
-
-def fill_value(arg: Any) -> Any:
-    """The fill value for the given argument.  The fill value is the
-    default value for a tensor when it is created with a given shape and dtype,
-    as well as the background value for sparse tensors.
-
-    Args:
-        arg: The argument to determine the fill value for.
-
-    Returns:
-        The fill value for the given argument.
-
-    Raises:
-        AttributeError: If the fill value is not implemented for the given type.
-    """
-    if hasattr(arg, "fill_value"):
-        return arg.fill_value
-    return query_property(arg, "fill_value", "__attr__")
-
-
-register_property(
-    np.ndarray, "fill_value", "__attr__", lambda x: np.zeros((), dtype=x.dtype)[()]
-)
-
-
-def element_type(arg: Any) -> type:
-    """The element type of the given argument.  The element type is the scalar type of
-    the elements in a tensor, which may be different from the data type of the
-    tensor.
-
-    Args:
-        arg: The tensor to determine the element type for.
-
-    Returns:
-        The element type of the given tensor.
-
-    Raises:
-        AttributeError: If the element type is not implemented for the given type.
-    """
-    if hasattr(arg, "element_type"):
-        return arg.element_type
-    return query_property(arg, "element_type", "__attr__")
-
-
-register_property(
-    np.ndarray,
-    "element_type",
-    "__attr__",
-    lambda x: x.dtype.type,
-)
-
-
-def length_type(arg: Any) -> type:
-    """The length type of the given argument. The length type is the type of
-    the value returned by len(arg).
-
-    Args:
-        arg: The object to determine the length type for.
-
-    Returns:
-        The length type of the given object.
-
-    Raises:
-        AttributeError: If the length type is not implemented for the given type.
-    """
-    if hasattr(arg, "length_type"):
-        return arg.length_type
-    return query_property(arg, "length_type", "__attr__")
-
-
-def shape_type(arg: Any) -> type:
-    """The shape type of the given argument. The shape type is the type of
-    the value returned by arg.shape.
-
-    Args:
-        arg: The object to determine the shape type for.
-
-    Returns:
-        The shape type of the given object.
-
-    Raises:
-        AttributeError: If the shape type is not implemented for the given type.
-    """
-    if hasattr(arg, "shape_type"):
-        return arg.shape_type
-    return query_property(arg, "shape_type", "__attr__")
-
-
-register_property(
-    np.ndarray,
-    "length_type",
-    "__attr__",
-    lambda x: int,
-)
-
-register_property(
-    np.ndarray,
-    "shape_type",
-    "__attr__",
-    lambda x: tuple,
-)
 
 
 def promote_type(a: Any, b: Any) -> type:
@@ -424,6 +333,11 @@ def is_associative(op: Any) -> bool:
 for op in [operator.add, operator.mul, operator.and_, operator.xor, operator.or_]:
     register_property(op, "__call__", "is_associative", lambda op: True)
 
+register_property(np.logaddexp, "__call__", "is_associative", lambda op: True)
+register_property(np.logical_and, "__call__", "is_associative", lambda op: True)
+register_property(np.logical_or, "__call__", "is_associative", lambda op: True)
+register_property(np.logical_xor, "__call__", "is_associative", lambda op: True)
+
 
 def is_identity(op: Any, val: Any) -> bool:
     """
@@ -453,6 +367,11 @@ register_property(
 register_property(operator.lshift, "__call__", "is_identity", lambda op, val: val == 0)
 register_property(operator.rshift, "__call__", "is_identity", lambda op, val: val == 0)
 register_property(operator.pow, "__call__", "is_identity", lambda op, val: val == 1)
+register_property(
+    np.logaddexp, "__call__", "is_identity", lambda op, val: val == -math.inf
+)
+register_property(np.logical_and, "__call__", "is_identity", lambda op, val: bool(val))
+register_property(np.logical_or, "__call__", "is_identity", lambda op, val: not val)
 
 
 def is_distributive(op, other_op):
@@ -488,6 +407,18 @@ register_property(
     "is_distributive",
     lambda op, other_op: other_op == operator.and_,
 )
+register_property(
+    np.logical_and,
+    "__call__",
+    "is_distributive",
+    lambda op, other_op: other_op in (np.logical_or, np.logical_xor),
+)
+register_property(
+    np.logical_or,
+    "__call__",
+    "is_distributive",
+    lambda op, other_op: other_op == np.logical_and,
+)
 
 
 def is_annihilator(op, val):
@@ -512,6 +443,16 @@ for op, func in [
     (operator.and_, lambda op, val: not bool(val)),
 ]:
     register_property(op, "__call__", "is_annihilator", func)
+
+register_property(
+    np.logaddexp, "__call__", "is_annihilator", lambda op, val: val == math.inf
+)
+register_property(
+    np.logical_and, "__call__", "is_annihilator", lambda op, val: not bool(val)
+)
+register_property(
+    np.logical_or, "__call__", "is_annihilator", lambda op, val: bool(val)
+)
 
 
 def fixpoint_type(op: Any, z: Any, t: type) -> type:
@@ -613,6 +554,11 @@ for op in [operator.add, operator.mul, operator.and_, operator.xor, operator.or_
         lambda op, arg, meth=meth: query_property(arg, meth, "init_value"),
     )
 
+register_property(np.logaddexp, "__call__", "init_value", lambda op, arg: -math.inf)
+register_property(np.logical_and, "__call__", "init_value", lambda op, arg: True)
+register_property(np.logical_or, "__call__", "init_value", lambda op, arg: False)
+register_property(np.logical_xor, "__call__", "init_value", lambda op, arg: False)
+
 
 def sum_init_value(t):
     if t is bool:
@@ -636,7 +582,7 @@ for t in StableNumber.__args__:
 register_property(min, "__call__", "init_value", lambda op, arg: type_max(arg))
 register_property(max, "__call__", "init_value", lambda op, arg: type_min(arg))
 
-for trig_op in (
+for unary in (
     np.sin,
     np.cos,
     np.tan,
@@ -649,9 +595,35 @@ for trig_op in (
     np.acos,
     np.acosh,
     np.atanh,
+    np.log,
+    np.log1p,
+    np.log2,
+    np.log10,
 ):
     register_property(
-        trig_op, "__call__", "return_type", lambda op, a, _trig_op=trig_op: float
+        unary, "__call__", "return_type", lambda op, a, _unary=unary: float
     )
 
-register_property(np.atan2, "__call__", "return_type", lambda op, a, b: float)
+for binary_op in (
+    np.atan2,
+    np.logaddexp,
+):
+    register_property(
+        binary_op,
+        "__call__",
+        "return_type",
+        lambda op, a, b, _binary_op=binary_op: float,
+    )
+
+for logical in (
+    np.logical_and,
+    np.logical_or,
+    np.logical_xor,
+):
+    register_property(
+        logical,
+        "__call__",
+        "return_type",
+        lambda op, a, b, _logical=logical: bool,
+    )
+register_property(np.logical_not, "__call__", "return_type", lambda op, a: bool)

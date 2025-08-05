@@ -4,6 +4,8 @@ from typing import Any
 
 import numpy as np
 
+from ..algebra.tensor import Tensor
+
 element_wise_ufunc_map = {
     np.add: operator.add,
     np.subtract: operator.sub,
@@ -35,6 +37,15 @@ element_wise_ufunc_map = {
     np.atan: np.atan,
     np.atanh: np.atanh,
     np.atan2: np.atan2,
+    np.log: np.log,
+    np.log1p: np.log1p,
+    np.log2: np.log2,
+    np.log10: np.log10,
+    np.logaddexp: np.logaddexp,
+    np.logical_and: np.logical_and,
+    np.logical_or: np.logical_or,
+    np.logical_xor: np.logical_xor,
+    np.logical_not: np.logical_not,
     # Add more ufuncs as needed
 }
 
@@ -43,11 +54,11 @@ ufunc_map: dict[Any, Any] = {
 }
 
 
-class OverrideTensor(ABC):
+class OverrideTensor(Tensor, ABC):
     @abstractmethod
     def override_module(self):
         """Return the module that implements the override logic."""
-        ...
+        raise NotImplementedError("No module override defined.")
 
     def __array_function__(self, func, types, args, kwargs):
         """Override NumPy functions using the __array_function__ protocol."""

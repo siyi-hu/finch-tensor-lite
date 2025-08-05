@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any, Self
 
 import numpy as np
 
-from ..symbolic import Term, TermTree
+from ..symbolic import Term, TermTree, literal_repr
 
 
 @dataclass(eq=True, frozen=True)
@@ -71,6 +71,9 @@ class Literal(LogicNode):
             return False
         res = self.val == other.val
         return res.all() if isinstance(res, np.ndarray) else res
+
+    def __repr__(self) -> str:
+        return literal_repr(type(self).__name__, asdict(self))
 
 
 @dataclass(eq=True, frozen=True)
@@ -168,11 +171,13 @@ class MapJoin(LogicTree, LogicExpression):
     @property
     def fields(self) -> list[Field]:
         """Returns fields of the node."""
-        # (mtsokol) I'm not sure if this comment still applies - the order is preserved.
-        # TODO: this is wrong here: the overall order should at least be concordant with
-        # the args if the args are concordant
-        fields = [f for fs in (x.fields for x in self.args) for f in fs]
-        return list(dict.fromkeys(fields))
+        from ._utils import NonConcordantLists, merge_concordant
+
+        args_fields = [x.fields for x in self.args]
+        try:
+            return merge_concordant(args_fields)
+        except NonConcordantLists:
+            return list(dict.fromkeys([f for fs in args_fields for f in fs]))
 
     @classmethod
     def from_children(cls, op, *args):

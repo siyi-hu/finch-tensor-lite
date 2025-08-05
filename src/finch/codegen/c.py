@@ -5,17 +5,18 @@ import shutil
 import subprocess
 import tempfile
 from abc import ABC, abstractmethod
+from collections import namedtuple
 from functools import lru_cache
-from operator import methodcaller
 from pathlib import Path
+from types import NoneType
 from typing import Any
 
 import numpy as np
 
 from .. import finch_assembly as asm
 from ..algebra import query_property, register_property
-from ..finch_assembly import BufferFormat
-from ..symbolic import Context, ScopedDict, has_format
+from ..finch_assembly import AssemblyStructFormat, BufferFormat, TupleFormat
+from ..symbolic import Context, Namespace, ScopedDict, format, has_format
 from ..util import config
 from ..util.cache import file_cache
 
@@ -90,22 +91,108 @@ def load_shared_lib(c_code, cc=None, cflags=None):
     return ctypes.CDLL(str(shared_lib_path))
 
 
-class CArgument(ABC):
-    @abstractmethod
-    def serialize_to_c(self, name):
-        """
-        Return a ctypes-compatible struct to be used in place of this argument
-        for the c backend.
-        """
-        ...
+def serialize_to_c(fmt, obj):
+    """
+    Serialize an object to a C-compatible format.
 
-    @abstractmethod
-    def deserialize_from_c(self, obj):
-        """
-        Update this argument based on how the c call modified `obj`, the result
-        of `serialize_to_c`.
-        """
-        ...
+    Args:
+        fmt: Format of obj
+        obj: The object to serialize.
+
+    Returns:
+        A ctypes-compatible struct.
+    """
+    if hasattr(fmt, "serialize_to_c"):
+        return fmt.serialize_to_c(obj)
+    return query_property(fmt, "serialize_to_c", "__attr__", obj)
+
+
+def deserialize_from_c(fmt, obj, c_obj):
+    """
+    Deserialize a C-compatible object back to the original format.
+
+    Args:
+        fmt: Format of obj
+        obj: The original object to update.
+        c_obj: The C-compatible object to deserialize from.
+
+    Returns:
+        None
+    """
+    if hasattr(fmt, "deserialize_from_c"):
+        fmt.deserialize_from_c(obj, c_obj)
+    else:
+        query_property(fmt, "deserialize_from_c", "__attr__", obj, c_obj)
+
+
+def construct_from_c(fmt, c_obj):
+    """
+    Construct an object from a C-compatible format.
+
+    Args:
+        fmt: The format of the object.
+        c_obj: The C-compatible object to construct from.
+
+    Returns:
+        An instance of the original object type.
+    """
+    if hasattr(fmt, "construct_from_c"):
+        return fmt.construct_from_c(c_obj)
+    try:
+        query_property(fmt, "construct_from_c", "__attr__", c_obj)
+    except NotImplementedError:
+        return fmt(c_obj)
+
+
+register_property(
+    tuple,
+    "serialize_to_c",
+    "__attr__",
+    lambda c_obj: None,
+)
+
+
+register_property(
+    NoneType,
+    "construct_from_c",
+    "__attr__",
+    lambda c_obj: None,
+)
+
+for t in (
+    ctypes.c_bool,
+    ctypes.c_char,
+    ctypes.c_wchar,
+    ctypes.c_byte,
+    ctypes.c_ubyte,
+    ctypes.c_short,
+    ctypes.c_ushort,
+    ctypes.c_int,
+    ctypes.c_int8,
+    ctypes.c_int16,
+    ctypes.c_int32,
+    ctypes.c_int64,
+    ctypes.c_uint,
+    ctypes.c_uint8,
+    ctypes.c_uint16,
+    ctypes.c_uint32,
+    ctypes.c_uint64,
+    ctypes.c_long,
+    ctypes.c_ulong,
+    ctypes.c_longlong,
+    ctypes.c_ulonglong,
+    ctypes.c_size_t,
+    ctypes.c_ssize_t,
+    ctypes.c_float,
+    ctypes.c_double,
+    ctypes.c_wchar_p,
+):
+    register_property(
+        t,
+        "serialize_to_c",
+        "__attr__",
+        lambda obj: obj,
+    )
 
 
 class CKernel:
@@ -131,12 +218,14 @@ class CKernel:
         for argtype, arg in zip(self.argtypes, args, strict=False):
             if not has_format(arg, argtype):
                 raise TypeError(f"Expected argument of type {argtype}, got {type(arg)}")
-        serial_args = list(map(methodcaller("serialize_to_c"), args))
+        serial_args = list(map(serialize_to_c, self.argtypes, args))
         res = self.c_function(*serial_args)
-        for arg, serial_arg in zip(args, serial_args, strict=False):
-            arg.deserialize_from_c(serial_arg)
+        for type_, arg, serial_arg in zip(
+            self.argtypes, args, serial_args, strict=False
+        ):
+            deserialize_from_c(type_, arg, serial_arg)
         if hasattr(self.ret_type, "construct_from_c"):
-            return res.construct_from_c(res)
+            return construct_from_c(res.format, res)
         if self.ret_type is type(None):
             return None
         return self.ret_type(res)
@@ -245,6 +334,18 @@ def c_function_call(op: Any, ctx, *args: Any) -> str:
         return f"{c_function_name(op, ctx, *args)}({', '.join(map(ctx, args))})"
 
 
+def c_getattr(fmt, ctx, obj, attr):
+    if hasattr(fmt, "c_getattr"):
+        return fmt.c_getattr(ctx, obj, attr)
+    return query_property(fmt, "c_getattr", "__attr__", ctx, obj, attr)
+
+
+def c_setattr(fmt, ctx, obj, attr, val):
+    if hasattr(fmt, "c_setattr"):
+        return fmt.c_setattr(ctx, obj, attr, val)
+    return query_property(fmt, "c_setattr", "__attr__", ctx, obj, attr, val)
+
+
 def register_n_ary_c_op_call(op, symbol):
     def property_func(op, ctx, *args):
         assert len(args) > 0
@@ -332,6 +433,7 @@ def c_literal(ctx, val):
 
 register_property(int, "c_literal", "__attr__", lambda x, ctx: str(x))
 register_property(float, "c_literal", "__attr__", lambda x, ctx: str(x))
+register_property(str, "c_literal", "__attr__", lambda x, ctx: f'"{x}"')
 register_property(
     np.generic,
     "c_literal",
@@ -382,6 +484,8 @@ def c_type(t):
 
 
 register_property(int, "c_type", "__attr__", lambda x: ctypes.c_int)
+register_property(float, "c_type", "__attr__", lambda x: ctypes.c_double)
+register_property(str, "c_type", "__attr__", lambda x: ctypes.c_wchar_p)
 register_property(
     np.generic, "c_type", "__attr__", lambda x: np.ctypeslib.as_ctypes_type(x)
 )
@@ -428,19 +532,31 @@ class CContext(Context):
     """
 
     def __init__(
-        self, tab="    ", indent=0, headers=None, bindings=None, fptr=None, **kwargs
+        self,
+        tab="    ",
+        indent=0,
+        headers=None,
+        types=None,
+        slots=None,
+        fptr=None,
+        **kwargs,
     ):
         if headers is None:
             headers = []
-        if bindings is None:
-            bindings = ScopedDict()
+        if types is None:
+            types = ScopedDict()
+        if slots is None:
+            slots = ScopedDict()
         super().__init__(**kwargs)
         self.tab = tab
         self.indent = indent
         self.headers = headers
         self._headerset = set(headers)
-        self.fptr = {}
-        self.bindings = bindings
+        if fptr is None:
+            fptr = {}
+        self.fptr = fptr
+        self.types = types
+        self.slots = slots
 
     def add_header(self, header):
         if header not in self._headerset:
@@ -515,17 +631,41 @@ class CContext(Context):
         blk.tab = self.tab
         blk.headers = self.headers
         blk._headerset = self._headerset
-        blk.bindings = self.bindings
+        blk.types = self.types
+        blk.slots = self.slots
+        blk.fptr = self.fptr
         return blk
 
     def subblock(self):
         blk = self.block()
         blk.indent = self.indent + 1
-        blk.bindings = self.bindings.scope()
+        blk.types = self.types.scope()
+        blk.slots = self.slots.scope()
         return blk
+
+    def resolve(self, node):
+        match node:
+            case asm.Slot(var_n, var_t):
+                if var_n in self.slots:
+                    var_o = self.slots[var_n]
+                    return asm.Stack(var_o, var_t)
+                raise KeyError(f"Slot {var_n} not found in context")
+            case asm.Stack(_, _):
+                return node
+            case _:
+                raise ValueError(f"Expected Slot or Stack, got: {type(node)}")
 
     def emit(self):
         return "\n".join([*self.preamble, *self.epilogue])
+
+    def cache(self, name, val):
+        if isinstance(val, asm.Literal | asm.Variable | asm.Stack):
+            return val
+        var_n = self.freshen(name)
+        var_t = val.result_format
+        var_t_code = self.ctype_name(c_type(var_t))
+        self.exec(f"{self.feed}{var_t_code} {var_n} = {self(val)};")
+        return asm.Variable(var_n, var_t)
 
     def __call__(self, prgm: asm.AssemblyNode):
         feed = self.feed
@@ -543,24 +683,74 @@ class CContext(Context):
                 val_code = self(val)
                 if val.result_format != var_t:
                     raise TypeError(f"Type mismatch: {val.result_format} != {var_t}")
-                if var_n in self.bindings:
-                    assert var_t == self.bindings[var_n]
+                if var_n in self.types:
+                    assert var_t == self.types[var_n]
                     self.exec(f"{feed}{var_n} = {val_code};")
                 else:
-                    self.bindings[var_n] = var_t
+                    self.types[var_n] = var_t
                     var_t_code = self.ctype_name(c_type(var_t))
                     self.exec(f"{feed}{var_t_code} {var_n} = {val_code};")
+                return None
+            case asm.GetAttr(obj, attr):
+                if not obj.result_format.struct_hasattr(attr.val):
+                    raise ValueError("trying to get missing attr")
+                return c_getattr(obj.result_format, self, self(obj), attr.val)
+            case asm.SetAttr(obj, attr, val):
+                obj = self.cache("obj", obj)
+                if not has_format(val, obj.result_format.struct_attrtype(attr.val)):
+                    raise TypeError(
+                        f"Type mismatch: {val.result_format} != "
+                        f"{obj.result_format.struct_attrtype(attr.val)}"
+                    )
+                val_code = self(val)
+                c_setattr(obj.result_format, self, self(obj), attr.val, val_code)
                 return None
             case asm.Call(f, args):
                 assert isinstance(f, asm.Literal)
                 return c_function_call(f.val, self, *args)
+            # case asm.Slot(var_n, var_t) as ref:
+            #    return self(self.deref(ref))
+            # case asm.Stack(obj, var_t) as ref:
+            #    return var_t.c_lower(self, obj)
+            case asm.Unpack(asm.Slot(var_n, var_t), val):
+                val_code = self(val)
+                if val.result_format != var_t:
+                    raise TypeError(f"Type mismatch: {val.result_format} != {var_t}")
+                if var_n in self.slots:
+                    raise KeyError(
+                        f"Slot {var_n} already exists in context, cannot unpack"
+                    )
+                if var_n in self.types:
+                    raise KeyError(
+                        f"Variable '{var_n}' is already defined in the current"
+                        f" context, cannot overwrite with slot."
+                    )
+                var_t_code = self.ctype_name(c_type(var_t))
+                self.exec(f"{feed}{var_t_code} {var_n} = {val_code};")
+                self.types[var_n] = var_t
+                self.slots[var_n] = var_t.c_unpack(
+                    self, var_n, asm.Variable(var_n, var_t)
+                )
+                return None
+            case asm.Repack(asm.Slot(var_n, var_t)):
+                if var_n not in self.slots or var_n not in self.types:
+                    raise KeyError(f"Slot {var_n} not found in context, cannot repack")
+                if var_t != self.types[var_n]:
+                    raise TypeError(f"Type mismatch: {var_t} != {self.types[var_n]}")
+                obj = self.slots[var_n]
+                var_t.c_repack(self, var_n, obj)
+                return None
             case asm.Load(buf, idx):
+                buf = self.resolve(buf)
                 return buf.result_format.c_load(self, buf, idx)
             case asm.Store(buf, idx, val):
+                buf = self.resolve(buf)
                 return buf.result_format.c_store(self, buf, idx, val)
             case asm.Resize(buf, len):
+                buf = self.resolve(buf)
                 return buf.result_format.c_resize(self, buf, len)
             case asm.Length(buf):
+                buf = self.resolve(buf)
                 return buf.result_format.c_length(self, buf)
             case asm.Block(bodies):
                 ctx_2 = self.block()
@@ -575,7 +765,7 @@ class CContext(Context):
                 end = self(end)
                 ctx_2 = self.subblock()
                 ctx_2(body)
-                ctx_2.bindings[var.name] = var.result_format
+                ctx_2.types[var.name] = var.result_format
                 body_code = ctx_2.emit()
                 self.exec(
                     f"{feed}for ({var_t} {var_2} = {start}; "
@@ -646,7 +836,7 @@ class CContext(Context):
                         case asm.Variable(name, t):
                             t_name = self.ctype_name(c_type(t))
                             arg_decls.append(f"{t_name} {name}")
-                            ctx_2.bindings[name] = t
+                            ctx_2.types[name] = t
                         case _:
                             raise NotImplementedError(
                                 f"Unrecognized argument type: {arg}"
@@ -682,7 +872,31 @@ class CContext(Context):
                 )
 
 
-class CBufferFormat(BufferFormat, ABC):
+class CArgumentFormat(ABC):
+    @abstractmethod
+    def serialize_to_c(self, obj):
+        """
+        Return a ctypes-compatible struct to be used in place of `obj`
+        for the c backend.
+        """
+        ...
+
+    @abstractmethod
+    def deserialize_from_c(self, obj, res):
+        """
+        Update this `obj` based on how the c call modified `res`, the result
+        of `serialize_to_c`.
+        """
+        ...
+
+    @abstractmethod
+    def construct_from_c(self, res):
+        """
+        Construct a new object based on the return value from c
+        """
+
+
+class CBufferFormat(BufferFormat, CArgumentFormat, ABC):
     """
     Abstract base class for the format of datastructures. The format defines how
     the data in an Buffer is organized and accessed.
@@ -715,3 +929,141 @@ class CBufferFormat(BufferFormat, ABC):
         Return C code which resizes a named buffer to the given length.
         """
         ...
+
+
+class CStackFormat(ABC):
+    """
+    Abstract base class for symbolic formats in C. Stack formats must also
+    support other functions with symbolic inputs in addition to variable ones.
+    """
+
+    @abstractmethod
+    def c_unpack(self, ctx, lhs, rhs):
+        """
+        Convert a value to a symbolic representation in C. Returns a NamedTuple
+        of unpacked variable names, etc. The `lhs` is the variable namespace to
+        assign to.
+        """
+        ...
+
+    @abstractmethod
+    def c_repack(self, ctx, lhs, rhs):
+        """
+        Update an object based on a symbolic representation. The `rhs` is the
+        symbolic representation to update from, and `lhs` is a variable name referring
+        to the original object to update.
+        """
+        ...
+
+
+def serialize_struct_to_c(fmt: AssemblyStructFormat, obj) -> Any:
+    args = [getattr(obj, name) for name in fmt.struct_fieldnames]
+    return struct_c_type(fmt)(*args)
+
+
+register_property(
+    AssemblyStructFormat, "serialize_to_c", "__attr__", serialize_struct_to_c
+)
+
+
+def deserialize_struct_from_c(fmt: AssemblyStructFormat, obj, c_struct: Any) -> None:
+    if fmt.is_mutable:
+        for name in fmt.struct_fieldnames:
+            setattr(obj, name, getattr(c_struct, name))
+        return
+
+
+register_property(
+    AssemblyStructFormat, "deserialize_from_c", "__attr__", deserialize_struct_from_c
+)
+
+c_structs: dict[Any, Any] = {}
+c_structnames = Namespace()
+
+
+def struct_c_type(fmt: AssemblyStructFormat):
+    res = c_structs.get(fmt)
+    if res:
+        return res
+    fields = [(name, c_type(fmt)) for name, fmt in fmt.struct_fields]
+    new_struct = type(
+        c_structnames.freshen("C", fmt.struct_name),
+        (ctypes.Structure,),
+        {"_fields_": fields},
+    )
+    c_structs[fmt] = new_struct
+    return new_struct
+
+
+register_property(
+    AssemblyStructFormat,
+    "c_type",
+    "__attr__",
+    lambda fmt: ctypes.POINTER(struct_c_type(fmt)),
+)
+
+
+def struct_c_getattr(fmt: AssemblyStructFormat, ctx, obj, attr):
+    return f"{obj}->{attr}"
+
+
+register_property(
+    AssemblyStructFormat,
+    "c_getattr",
+    "__attr__",
+    struct_c_getattr,
+)
+
+
+def struct_c_setattr(fmt: AssemblyStructFormat, ctx, obj, attr, val):
+    ctx.emit(f"{ctx.feed}{obj}->{attr} = {val};")
+    return
+
+
+register_property(
+    AssemblyStructFormat,
+    "c_setattr",
+    "__attr__",
+    struct_c_setattr,
+)
+
+
+def struct_construct_from_c(fmt: AssemblyStructFormat, c_struct):
+    args = [getattr(c_struct, name) for (name, _) in fmt.struct_fieldnames]
+    return fmt.__class__(*args)
+
+
+register_property(
+    AssemblyStructFormat,
+    "construct_from_c",
+    "__attr__",
+    struct_construct_from_c,
+)
+
+
+def serialize_tuple_to_c(fmt, obj):
+    x = namedtuple("CTuple", fmt.struct_fieldnames)(*obj)  # noqa: PYI024
+    return serialize_to_c(format(x), x)
+
+
+register_property(
+    TupleFormat,
+    "serialize_to_c",
+    "__attr__",
+    serialize_tuple_to_c,
+)
+register_property(
+    TupleFormat,
+    "construct_from_c",
+    "__attr__",
+    lambda fmt, obj, c_tuple: tuple(c_tuple),
+)
+
+register_property(
+    TupleFormat,
+    "c_type",
+    "__attr__",
+    lambda fmt: ctypes.POINTER(
+        struct_c_type(asm.NamedTupleFormat("CTuple", fmt.struct_fields))
+    ),
+)
