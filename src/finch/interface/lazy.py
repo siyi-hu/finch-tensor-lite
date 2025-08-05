@@ -20,6 +20,7 @@ from ..algebra import (
     fixpoint_type,
     identity,
     init_value,
+    last,
     maxby,
     minby,
     promote_max,
@@ -1665,34 +1666,84 @@ def std(
     return pow(d, 0.5)
 
 
+@dataclass(frozen=True)
+class IndicesTensorFormat(DefaultTensorFormat):
+    """
+    Tensor format for argmin and argmax tensors.
+    """
+
+
+class IndicesTensor(Tensor):
+    """
+    Representing indices-pairwised tensor format for input lazy tensor.
+    """
+
+    _fill_value: Any
+    _element_type: Any
+
+    def __init__(self, tensor, axis, fill_value, element_type):
+        """
+        Args:
+            tensor:
+                input tensor.
+            axis (int | None):
+                axis indicated to calculate along with.
+        """
+        if hasattr(tensor, "to_numpy") and callable(tensor.to_numpy):
+            tensor = tensor.to_numpy()
+
+        self._shape = tensor.shape
+        self.axis = axis
+
+        # Pairwise tensor with indices
+        if axis is None:
+            indices = np.arange(np.prod(tensor.shape)).reshape(tensor.shape)
+            pairwise = np.vectorize(lambda tns, idx: Pair(tns, idx), otypes=[Pair])
+            paired_tensor = pairwise(tensor, indices)
+        else:
+            indices = np.indices(tensor.shape)
+            pairwise = np.vectorize(
+                lambda tns, *idx: Pair(tns, idx[axis]), otypes=[Pair]
+            )
+            paired_tensor = pairwise(tensor, *indices)
+
+        self.tensor = paired_tensor
+        self._fill_value = fill_value
+        self._element_type = element_type
+
+    def __getitem__(self, idxs):
+        # TODO: Confirm what getitem is doing here
+        return self.tensor
+
+    @property
+    def format(self):
+        return IndicesTensorFormat(
+            self._fill_value,
+            self._element_type,
+            tuple(type(dim) for dim in self.shape),
+        )
+
+    @property
+    def shape(self):
+        return self._shape
+
+    def asarray(self):
+        return self
+
+
 def argmin(x, /, *, axis: int | None = None, keepdims: bool = False, init=None):
     """
     Returns the indices of the minimum values in input array ``x`` along given axis.
     """
     if isinstance(axis, tuple):
-        raise ValueError("Type of axis should is only allowed to be int or None.")
+        raise ValueError("Type of axis is only allowed to be int or None.")
 
     x = defer(x)
-    computed_x = _compute(x)
-    if hasattr(computed_x, "to_numpy") and callable(computed_x.to_numpy):
-        computed_x = computed_x.to_numpy()
-
-    # Pairwise tensor with indices
-    if axis is None:
-        indices = np.arange(np.prod(x.shape)).reshape(x.shape)
-        pairwise = np.vectorize(lambda tns, idx: Pair(tns, idx), otypes=[Pair])
-        paired_tensor = pairwise(computed_x, indices)
-    else:
-        indices = np.indices(x.shape)
-        pairwise = np.vectorize(lambda tns, *idx: Pair(tns, idx[axis]), otypes=[Pair])
-        paired_tensor = pairwise(computed_x, *indices)
-
-    # Calculate argmin and unpair to return the indices
-    res = _compute(
-        reduce(minby, defer(paired_tensor), axis=axis, keepdims=keepdims, init=init)
+    indices_tensor = IndicesTensor(_compute(x), axis, x.fill_value, x.element_type)
+    return elementwise(
+        last,
+        reduce(minby, defer(indices_tensor), axis=axis, keepdims=keepdims, init=init),
     )
-    unpair = np.vectorize(lambda tns: tns.index, otypes=[Pair])
-    return elementwise(identity, defer(unpair(res)))
 
 
 def argmax(x, /, *, axis: int | None = None, keepdims: bool = False, init=None):
@@ -1700,26 +1751,11 @@ def argmax(x, /, *, axis: int | None = None, keepdims: bool = False, init=None):
     Returns the indices of the maximum values in input array ``x`` along given axis.
     """
     if isinstance(axis, tuple):
-        raise ValueError("Type of axis should is only allowed to be int or None.")
+        raise ValueError("Type of axis is only allowed to be int or None.")
 
     x = defer(x)
-    computed_x = _compute(x)
-    if hasattr(computed_x, "to_numpy") and callable(computed_x.to_numpy):
-        computed_x = computed_x.to_numpy()
-
-    # Pairwise tensor with indices
-    if axis is None:
-        indices = np.arange(np.prod(x.shape)).reshape(x.shape)
-        pairwise = np.vectorize(lambda tns, idx: Pair(tns, idx), otypes=[Pair])
-        paired_tensor = pairwise(computed_x, indices)
-    else:
-        indices = np.indices(x.shape)
-        pairwise = np.vectorize(lambda tns, *idx: Pair(tns, idx[axis]), otypes=[Pair])
-        paired_tensor = pairwise(computed_x, *indices)
-
-    # Calculate argmin and unpair to return the indices
-    res = _compute(
-        reduce(maxby, defer(paired_tensor), axis=axis, keepdims=keepdims, init=init)
+    indices_tensor = IndicesTensor(_compute(x), axis, x.fill_value, x.element_type)
+    return elementwise(
+        last,
+        reduce(maxby, defer(indices_tensor), axis=axis, keepdims=keepdims, init=init),
     )
-    unpair = np.vectorize(lambda tns: tns.index, otypes=[Pair])
-    return elementwise(identity, defer(unpair(res)))

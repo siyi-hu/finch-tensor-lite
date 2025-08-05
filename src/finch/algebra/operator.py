@@ -180,6 +180,42 @@ algebra.register_property(
 )
 
 
+def first(x: Pair):
+    """
+    Returns the input value unchanged.
+    """
+    if not isinstance(x, Pair):
+        return x
+
+    return x.value
+
+
+def last(x: Pair):
+    """
+    Returns the input value unchanged.
+    """
+    if not isinstance(x, Pair):
+        return 0
+
+    return x.index
+
+
+algebra.register_property(
+    first,
+    "__call__",
+    "return_type",
+    lambda op, x: x,
+)
+
+
+algebra.register_property(
+    last,
+    "__call__",
+    "return_type",
+    lambda op, x: int,
+)
+
+
 algebra.register_property(minby, "__call__", "return_type", lambda op, a, b: Pair)
 algebra.register_property(maxby, "__call__", "return_type", lambda op, a, b: Pair)
 
