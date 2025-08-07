@@ -14,7 +14,7 @@ from ..algebra import (
     register_property,
     shape_type,
 )
-from ..symbolic import ScopedDict
+from ..symbolic import ScopedDict, has_format
 from . import nodes as ntn
 
 
@@ -193,8 +193,18 @@ def np_declare(tns, init, op, shape):
             raise ValueError(
                 f"Invalid dimension start value {dim.start} for ndarray declaration."
             )
-    tns = np.resize(tns, [dim.end for dim in shape])
-    tns.fill(init)
+    shape = tuple(dim.end for dim in shape)
+
+    if tns.shape != shape:
+        if tns.shape == ():
+            tns = np.full(shape, init, tns.dtype)
+        else:
+            raise ValueError(
+                f"Shape mismatch: cannot resize numpy array. Expected {shape},"
+                f" got {tns.shape} for ndarray declaration."
+            )
+    else:
+        tns.fill(init)
     return tns
 
 
@@ -223,38 +233,6 @@ def thaw(tns, op):
         return query_property(tns, "freeze", "__attr__", op)
     except AttributeError:
         return tns
-
-
-@dataclass(eq=True, frozen=True)
-class ExtentValue:
-    """
-    A class to represent the extent of a loop variable.
-    This is used to define the start and end values of a loop.
-    """
-
-    start: Any
-    end: Any
-
-    def loop(self, ctx, idx, body):
-        for idx_e in range(self.start, self.end):
-            # Create a new scope for each iteration
-            ctx_2 = ctx.scope(loop_state=HaltState())
-            # Assign the loop variable
-            ctx_2.bindings[idx.name] = idx.type_(idx_e)
-            # Execute the body of the loop
-            ctx_2(body)
-
-
-def extent(start, end):
-    """
-    Create an extent value for a loop.
-    """
-    return ExtentValue(start, end)
-
-
-def dimension(tns, mode):
-    end = tns.shape[mode]
-    return extent(type(end)(0), end)
 
 
 class NotationInterpreterKernel:
@@ -306,23 +284,42 @@ class NotationInterpreter:
     An interpreter for FinchNotation.
     """
 
-    def __init__(self, bindings=None, types=None, loop_state=None, function_state=None):
+    def __init__(
+        self,
+        bindings=None,
+        slots=None,
+        types=None,
+        loop_state=None,
+        function_state=None,
+    ):
         if bindings is None:
             bindings = ScopedDict()
+        if slots is None:
+            slots = ScopedDict()
         if types is None:
             types = ScopedDict()
         self.bindings = bindings
+        self.slots = slots
         self.types = types
         self.loop_state = loop_state
         self.function_state = function_state
 
-    def scope(self, bindings=None, types=None, loop_state=None, function_state=None):
+    def scope(
+        self,
+        bindings=None,
+        slots=None,
+        types=None,
+        loop_state=None,
+        function_state=None,
+    ):
         """
         Create a new scope for the interpreter.
         This allows for nested scopes and variable shadowing.
         """
         if bindings is None:
             bindings = self.bindings.scope()
+        if slots is None:
+            slots = self.slots.scope()
         if types is None:
             types = self.types.scope()
         if loop_state is None:
@@ -331,6 +328,7 @@ class NotationInterpreter:
             function_state = self.function_state
         return NotationInterpreter(
             bindings=bindings,
+            slots=slots,
             types=types,
             loop_state=loop_state,
             function_state=function_state,
@@ -369,7 +367,39 @@ class NotationInterpreter:
                     self.bindings[var_n] = val_e
                     return None
                 raise NotImplementedError(f"Unrecognized assignment target: {var}")
+            case ntn.Slot(var_n, var_t):
+                if var_n in self.types:
+                    def_t = self.types[var_n]
+                    if def_t != var_t:
+                        raise TypeError(
+                            f"Slot '{var_n}' is declared as type {def_t}, "
+                            f"but used as type {var_t}."
+                        )
+                if var_n in self.slots:
+                    return self.slots[var_n]
+                raise KeyError(f"Slot '{var_n}' is not defined in the current context.")
+            case ntn.Unpack(ntn.Slot(var_n, var_t), val):
+                val_e = self(val)
+                if not has_format(val_e, var_t):
+                    raise TypeError(
+                        f"Assigned value {val_e} is not of type {var_t} for "
+                        f"variable '{var_n}'."
+                    )
+                assert var_n not in self.types, (
+                    f"Variable '{var_n}' is already defined in the current"
+                    f" context, cannot overwrite with slot."
+                )
+                self.types[var_n] = var_t
+                self.slots[var_n] = val_e
+                return None
+            case ntn.Repack(ntn.Slot(var_n, var_t), val):
+                if isinstance(val, ntn.Variable):
+                    val_n = val.name
+                    self.bindings[val_n] = self.slots[var_n]
+                    return None
+                raise NotImplementedError(f"Unrecognized repack obj target: {val}")
             case ntn.Access(tns, mode, idxs):
+                assert isinstance(tns, ntn.Slot)
                 tns_e = self(tns)
                 idxs_e = [self(idx) for idx in idxs]
                 match mode:
@@ -394,29 +424,25 @@ class NotationInterpreter:
                 ext_e.loop(self, idx, body)
                 return None
             case ntn.Declare(tns, init, op, shape):
-                if not isinstance(tns, ntn.Variable):
-                    raise TypeError(
-                        f"Declaration target must be a variable, got {type(tns)}."
-                    )
+                assert isinstance(tns, ntn.Slot)
                 tns_e = self(tns)
                 init_e = self(init)
                 op_e = self(op)
                 shape_e = [self(s) for s in shape]
-                return declare(tns_e, init_e, op_e, shape_e)
+                self.slots[tns.name] = declare(tns_e, init_e, op_e, shape_e)
+                return None
             case ntn.Freeze(tns, op):
-                if not isinstance(tns, ntn.Variable):
-                    raise TypeError(
-                        f"Freeze target must be a variable, got {type(tns)}."
-                    )
+                assert isinstance(tns, ntn.Slot)
                 tns_e = self(tns)
                 op_e = self(op)
-                return freeze(tns_e, op_e)
+                self.slots[tns.name] = freeze(tns_e, op_e)
+                return None
             case ntn.Thaw(tns, op):
-                if not isinstance(tns, ntn.Variable):
-                    raise TypeError(f"Thaw target must be a variable, got {type(tns)}.")
+                assert isinstance(tns, ntn.Slot)
                 tns_e = self(tns)
                 op_e = self(op)
-                return thaw(tns_e, op_e)
+                self.slots[tns.name] = thaw(tns_e, op_e)
+                return None
             case ntn.If(cond, body):
                 if self(cond):
                     ctx_2 = self.scope()
@@ -448,7 +474,7 @@ class NotationInterpreter:
                     ctx_2(body)
                     if ctx_2.function_state.has_returned:
                         ret_e = ctx_2.function_state.return_value
-                        if not isinstance(ret_e, ret_t):
+                        if not has_format(ret_e, ret_t):
                             raise TypeError(
                                 f"Return value {ret_e} is not of type {ret_t} "
                                 f"for function '{func_n}'."
@@ -479,7 +505,11 @@ class NotationInterpreter:
                                 f"Unrecognized function definition: {func}"
                             )
                 return NotationInterpreterModule(self, kernels)
+            case ntn.Stack(val):
+                raise NotImplementedError(
+                    "NotationInterpreter does not support symbolic, no target language"
+                )
             case _:
                 raise NotImplementedError(
-                    f"Unrecognized assembly node type: {type(prgm)}"
+                    f"Unrecognized notation node type: {type(prgm)}"
                 )

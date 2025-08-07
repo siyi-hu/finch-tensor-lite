@@ -45,6 +45,7 @@ class NumpyBuffer(Buffer):
         """
         return NumpyBufferFormat(self.arr.dtype.type)
 
+    # TODO should be property
     def length(self):
         return self.arr.size
 
@@ -77,7 +78,7 @@ class NumpyBufferFormat(CBufferFormat, NumbaBufferFormat, CStackFormat):
         """
         Returns the type used for the length of the buffer.
         """
-        return int
+        return np.intp
 
     @property
     def element_type(self):

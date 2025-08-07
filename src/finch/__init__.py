@@ -3,6 +3,14 @@ from .codegen import (
     NumpyBuffer,
     NumpyBufferFormat,
 )
+from .compile import (
+    BufferizedNDArray,
+    Extent,
+    ExtentFormat,
+    NotationContext,
+    dimension,
+    extent,
+)
 from .galley import (
     DenseStats,
     TensorDef,
@@ -93,15 +101,20 @@ from .tensor import (
 )
 
 __all__ = [
+    "BufferizedNDArray",
     "DenseLevelFormat",
     "DenseStats",
     "EagerTensor",
     "ElementLevelFormat",
+    "Extent",
+    "ExtentFormat",
     "FiberTensorFormat",
     "Formattable",
     "LazyTensor",
+    "NotationContext",
     "NumpyBuffer",
     "NumpyBufferFormat",
+    "Reflector",
     "Scalar",
     "Tensor",
     "TensorDef",
@@ -132,9 +145,11 @@ __all__ = [
     "cos",
     "cosh",
     "defer",
+    "dimension",
     "element_type",
     "elementwise",
     "expand_dims",
+    "extent",
     "fill_value",
     "flatten",
     "floordiv",
