@@ -14,6 +14,7 @@ from ..algebra import (
     register_property,
     shape_type,
 )
+from ..finch_assembly import nodes as asm
 from ..symbolic import ScopedDict, has_format
 from . import nodes as ntn
 
@@ -334,13 +335,21 @@ class NotationInterpreter:
             function_state=function_state,
         )
 
-    def __call__(self, prgm: ntn.NotationNode):
+    def __call__(self, prgm: ntn.NotationNode | asm.AssemblyNode):
         """
         Run the program.
         """
         match prgm:
-            case ntn.Literal(value):
-                return value
+            case ntn.Literal(val) | asm.Literal(val):
+                return val
+            case ntn.Value(val, val_t):
+                val_e = self(val)
+                if type(val_e) is not val_t:
+                    raise TypeError(
+                        f"Value '{val_e}' is expected to be of type {val_t}, "
+                        f"but is a type {type(val_e)}."
+                    )
+                return val_e
             case ntn.Variable(var_n, var_t):
                 if var_n in self.types:
                     def_t = self.types[var_n]
@@ -396,6 +405,8 @@ class NotationInterpreter:
                 if isinstance(val, ntn.Variable):
                     val_n = val.name
                     self.bindings[val_n] = self.slots[var_n]
+                    del self.types[var_n]
+                    del self.slots[var_n]
                     return None
                 raise NotImplementedError(f"Unrecognized repack obj target: {val}")
             case ntn.Access(tns, mode, idxs):
