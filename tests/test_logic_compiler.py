@@ -3,6 +3,7 @@ import operator
 import numpy as np
 
 import finch.finch_logic as logic
+from finch.algebra.tensor import NDArrayFType
 from finch.autoschedule import (
     LogicCompiler,
 )
@@ -110,9 +111,9 @@ def test_logic_compiler():
             Function(
                 name=Variable(name="func", type_=np.ndarray),
                 args=(
-                    Variable(name=":A0", type_=np.ndarray),
-                    Variable(name=":A1", type_=np.ndarray),
-                    Variable(name=":A2", type_=np.ndarray),
+                    Variable(name=":A0", type_=NDArrayFType(np.dtype(int), 2)),
+                    Variable(name=":A1", type_=NDArrayFType(np.dtype(int), 2)),
+                    Variable(name=":A2", type_=NDArrayFType(np.dtype(int), 0)),
                 ),
                 body=Block(
                     bodies=(
@@ -121,7 +122,10 @@ def test_logic_compiler():
                             rhs=Call(
                                 op=Literal(val=dimension),
                                 args=(
-                                    Variable(name=":A0", type_=np.ndarray),
+                                    Variable(
+                                        name=":A0",
+                                        type_=NDArrayFType(np.dtype(int), 2),
+                                    ),
                                     Literal(val=0),
                                 ),
                             ),
@@ -131,7 +135,10 @@ def test_logic_compiler():
                             rhs=Call(
                                 op=Literal(val=dimension),
                                 args=(
-                                    Variable(name=":A0", type_=np.ndarray),
+                                    Variable(
+                                        name=":A0",
+                                        type_=NDArrayFType(np.dtype(int), 2),
+                                    ),
                                     Literal(val=1),
                                 ),
                             ),
@@ -141,25 +148,30 @@ def test_logic_compiler():
                             rhs=Call(
                                 op=Literal(val=dimension),
                                 args=(
-                                    Variable(name=":A1", type_=np.ndarray),
+                                    Variable(
+                                        name=":A1",
+                                        type_=NDArrayFType(np.dtype(int), 2),
+                                    ),
                                     Literal(val=1),
                                 ),
                             ),
                         ),
                         Unpack(
-                            Slot(name=":A0_slot", type=np.ndarray),
-                            Variable(name=":A0", type_=np.ndarray),
+                            Slot(name=":A0_slot", type=NDArrayFType(np.dtype(int), 2)),
+                            Variable(name=":A0", type_=NDArrayFType(np.dtype(int), 2)),
                         ),
                         Unpack(
-                            Slot(name=":A1_slot", type=np.ndarray),
-                            Variable(name=":A1", type_=np.ndarray),
+                            Slot(name=":A1_slot", type=NDArrayFType(np.dtype(int), 2)),
+                            Variable(name=":A1", type_=NDArrayFType(np.dtype(int), 2)),
                         ),
                         Unpack(
-                            Slot(name=":A2_slot", type=np.ndarray),
-                            Variable(name=":A2", type_=np.ndarray),
+                            Slot(name=":A2_slot", type=NDArrayFType(np.dtype(int), 0)),
+                            Variable(name=":A2", type_=NDArrayFType(np.dtype(int), 0)),
                         ),
                         Declare(
-                            tns=Slot(name=":A2_slot", type=np.ndarray),
+                            tns=Slot(
+                                name=":A2_slot", type=NDArrayFType(np.dtype(int), 0)
+                            ),
                             init=Literal(val=0),
                             op=Literal(val=operator.add),
                             shape=(
@@ -181,7 +193,10 @@ def test_logic_compiler():
                                             Increment(
                                                 lhs=Access(
                                                     tns=Slot(
-                                                        name=":A2_slot", type=np.ndarray
+                                                        name=":A2_slot",
+                                                        type=NDArrayFType(
+                                                            np.dtype(int), 0
+                                                        ),
                                                     ),
                                                     mode=Update(
                                                         op=Literal(val=operator.add)
@@ -198,7 +213,9 @@ def test_logic_compiler():
                                                             arg=Access(
                                                                 tns=Slot(
                                                                     name=":A0_slot",
-                                                                    type=np.ndarray,
+                                                                    type=NDArrayFType(
+                                                                        np.dtype(int), 2
+                                                                    ),
                                                                 ),
                                                                 mode=Read(),
                                                                 idxs=(
@@ -217,7 +234,9 @@ def test_logic_compiler():
                                                             arg=Access(
                                                                 tns=Slot(
                                                                     name=":A1_slot",
-                                                                    type=np.ndarray,
+                                                                    type=NDArrayFType(
+                                                                        np.dtype(int), 2
+                                                                    ),
                                                                 ),
                                                                 mode=Read(),
                                                                 idxs=(
@@ -241,14 +260,40 @@ def test_logic_compiler():
                             ),
                         ),
                         Freeze(
-                            tns=Slot(name=":A2_slot", type=np.ndarray),
+                            tns=Slot(
+                                name=":A2_slot", type=NDArrayFType(np.dtype(int), 0)
+                            ),
                             op=Literal(val=operator.add),
                         ),
                         Repack(
-                            val=Slot(name=":A2_slot", type=np.ndarray),
-                            obj=Variable(name=":A2", type_=np.ndarray),
+                            val=Slot(
+                                name=":A0_slot", type=NDArrayFType(np.dtype(int), 2)
+                            ),
+                            obj=Variable(
+                                name=":A0", type_=NDArrayFType(np.dtype(int), 2)
+                            ),
                         ),
-                        Return(val=Variable(name=":A2", type_=np.ndarray)),
+                        Repack(
+                            val=Slot(
+                                name=":A1_slot", type=NDArrayFType(np.dtype(int), 2)
+                            ),
+                            obj=Variable(
+                                name=":A1", type_=NDArrayFType(np.dtype(int), 2)
+                            ),
+                        ),
+                        Repack(
+                            val=Slot(
+                                name=":A2_slot", type=NDArrayFType(np.dtype(int), 0)
+                            ),
+                            obj=Variable(
+                                name=":A2", type_=NDArrayFType(np.dtype(int), 0)
+                            ),
+                        ),
+                        Return(
+                            val=Variable(
+                                name=":A2", type_=NDArrayFType(np.dtype(int), 0)
+                            )
+                        ),
                     )
                 ),
             ),
@@ -260,7 +305,7 @@ def test_logic_compiler():
     assert program == expected_program
 
     mod = NotationInterpreter()(program)
-    args = [tables[logic.Alias(arg.name)] for arg in program.funcs[0].args]
+    args = [tables[logic.Alias(arg.name)].tns.val for arg in program.funcs[0].args]
 
     result = mod.func(*args)
 
