@@ -225,3 +225,59 @@ def test_simple_struct():
 
     result = mod.simple_struct(p, x)
     assert result == 9.0
+
+
+def test_debug_statement():
+    Point = namedtuple("Point", ["x", "y"])
+    p = Point(np.float64(1.0), np.float64(2.0))
+    x = (1, 4)
+
+    p_var = asm.Variable("p", ftype(p))
+    x_var = asm.Variable("x", ftype(x))
+    res_var = asm.Variable("res", np.float64)
+    mod = AssemblyInterpreter()(
+        asm.Module(
+            (
+                asm.Function(
+                    asm.Variable("simple_struct", np.float64),
+                    (p_var, x_var),
+                    asm.Block(
+                        (
+                            asm.Assign(
+                                res_var,
+                                asm.Call(
+                                    asm.Literal(operator.mul),
+                                    (
+                                        asm.GetAttr(p_var, asm.Literal("x")),
+                                        asm.GetAttr(x_var, asm.Literal("element_0")),
+                                    ),
+                                ),
+                            ),
+                            asm.Assign(
+                                res_var,
+                                asm.Call(
+                                    asm.Literal(operator.add),
+                                    (
+                                        res_var,
+                                        asm.Call(
+                                            asm.Literal(operator.mul),
+                                            (
+                                                asm.GetAttr(p_var, asm.Literal("y")),
+                                                asm.GetAttr(
+                                                    x_var, asm.Literal("element_1")
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                ),
+                            ),
+                            asm.Return(res_var),
+                        )
+                    ),
+                ),
+            ),
+        )
+    )
+
+    result = mod.simple_struct(p, x)
+    assert result == 9.0
