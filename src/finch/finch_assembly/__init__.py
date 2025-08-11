@@ -1,5 +1,6 @@
 from .buffer import Buffer, BufferFType, element_type, length_type
 from .interpreter import AssemblyInterpreter, AssemblyInterpreterKernel
+from .logger import debug
 from .nodes import (
     AssemblyNode,
     AssemblyPrinter,
@@ -64,6 +65,7 @@ __all__ = [
     "Unpack",
     "Variable",
     "WhileLoop",
+    "debug",
     "element_type",
     "length_type",
 ]

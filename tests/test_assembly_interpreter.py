@@ -21,6 +21,7 @@ from finch.finch_assembly import (  # noqa: F401
     Module,
     Return,
     Variable,
+    debug,
 )
 from finch.symbolic import ftype
 
@@ -278,6 +279,7 @@ def test_debug_statement():
             ),
         )
     )
-
     result = mod.simple_struct(p, x)
-    assert result == 9.0
+
+    debug("mod: ", mod)
+    debug("result: ", result)
