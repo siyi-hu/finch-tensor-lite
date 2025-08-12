@@ -3,7 +3,6 @@ from .interpreter import AssemblyInterpreter, AssemblyInterpreterKernel
 from .logger import debug
 from .nodes import (
     AssemblyNode,
-    AssemblyPrinter,
     Assign,
     Block,
     Break,
@@ -35,7 +34,6 @@ __all__ = [
     "AssemblyInterpreter",
     "AssemblyInterpreterKernel",
     "AssemblyNode",
-    "AssemblyPrinter",
     "AssemblyStructFType",
     "Assign",
     "Block",
