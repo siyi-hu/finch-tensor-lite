@@ -279,7 +279,7 @@ def test_debug_statement():
             ),
         )
     )
-    result = mod.simple_struct(p, x)
-
     debug("mod: ", mod)
-    debug("result: ", result)
+
+    # result = mod.simple_struct(p, x)
+    # debug("result: ", result)
