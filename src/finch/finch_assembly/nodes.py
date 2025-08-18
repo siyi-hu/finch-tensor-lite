@@ -574,7 +574,7 @@ class Print(AssemblyTree):
     """
 
     message: Variable
-    args: tuple[Variable, ...]
+    args: Variable
 
     @property
     def children(self):

@@ -244,8 +244,8 @@ def test_debug_statement():
                     (p_var, x_var),
                     asm.Block(
                         (
-                            asm.Print("x_var: ", x_var),
                             asm.Print("p_var: ", p_var),
+                            asm.Print("x_var: ", x_var),
                             asm.Assign(
                                 res_var,
                                 asm.Call(
@@ -274,7 +274,7 @@ def test_debug_statement():
                                     ),
                                 ),
                             ),
-                            # asm.Print("res_var: ", res_var),
+                            asm.Print("res_var: ", res_var),
                             asm.Return(res_var),
                         )
                     ),

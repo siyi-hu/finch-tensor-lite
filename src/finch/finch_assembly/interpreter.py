@@ -330,7 +330,9 @@ class AssemblyInterpreter:
                             )
                 return AssemblyInterpreterModule(self, kernels)
             case asm.Print(message, args):
-                print(f"[TEST] Print({message}, {args})")
+                # TODO: Output terminal (stdout is not good)
+                # TODO: Handle expressions, e.g. mul(p_var + x_var)
+                print(f"{message}" + str(self(args)))
                 return None
             case asm.Stack(val):
                 raise NotImplementedError(
