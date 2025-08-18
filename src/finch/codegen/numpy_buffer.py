@@ -4,8 +4,9 @@ from typing import NamedTuple
 import numpy as np
 
 from ..finch_assembly import Buffer
-from .c import CBufferFormat, CStackFormat, c_type
-from .numba_backend import NumbaBufferFormat
+from ..util import qual_str
+from .c import CBufferFType, CStackFType, c_type
+from .numba_backend import NumbaBufferFType
 
 
 @ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.POINTER(ctypes.py_object), ctypes.c_size_t)
@@ -39,12 +40,13 @@ class NumpyBuffer(Buffer):
         self.arr = arr
 
     @property
-    def format(self):
+    def ftype(self):
         """
-        Returns the format of the buffer, which is a NumpyBufferFormat.
+        Returns the ftype of the buffer, which is a NumpyBufferFType.
         """
-        return NumpyBufferFormat(self.arr.dtype.type)
+        return NumpyBufferFType(self.arr.dtype.type)
 
+    # TODO should be property
     def length(self):
         return self.arr.size
 
@@ -57,27 +59,34 @@ class NumpyBuffer(Buffer):
     def resize(self, new_length: int):
         self.arr = np.resize(self.arr, new_length)
 
+    def __str__(self):
+        arr_str = str(self.arr).replace("\n", "")
+        return f"np_buf({arr_str})"
 
-class NumpyBufferFormat(CBufferFormat, NumbaBufferFormat, CStackFormat):
+
+class NumpyBufferFType(CBufferFType, NumbaBufferFType, CStackFType):
     """
-    A format for buffers that uses NumPy arrays. This is a concrete implementation
-    of the BufferFormat class.
+    A ftype for buffers that uses NumPy arrays. This is a concrete implementation
+    of the BufferFType class.
     """
 
     def __init__(self, dtype: type):
         self._dtype = np.dtype(dtype).type
 
     def __eq__(self, other):
-        if not isinstance(other, NumpyBufferFormat):
+        if not isinstance(other, NumpyBufferFType):
             return False
         return self._dtype == other._dtype
+
+    def __str__(self):
+        return f"np_buf_t({qual_str(self._dtype)})"
 
     @property
     def length_type(self):
         """
         Returns the type used for the length of the buffer.
         """
-        return int
+        return np.intp
 
     @property
     def element_type(self):

@@ -8,12 +8,14 @@ from numpy.testing import assert_equal
 
 import finch
 import finch.finch_assembly as asm
-from finch import format
+from finch import ftype
 from finch.codegen import (
     CCompiler,
+    CGenerator,
     NumbaCompiler,
+    NumbaGenerator,
     NumpyBuffer,
-    NumpyBufferFormat,
+    NumpyBufferFType,
 )
 
 
@@ -65,7 +67,7 @@ def test_buffer_function():
     a = np.array([1, 2, 3], dtype=np.float64)
     b = NumpyBuffer(a)
     f = finch.codegen.c.load_shared_lib(c_code).concat_buffer_with_self
-    k = finch.codegen.c.CKernel(f, type(None), [NumpyBufferFormat(np.float64)])
+    k = finch.codegen.c.CKernel(f, type(None), [NumpyBufferFType(np.float64)])
     k(b)
     result = b.arr
     expected = np.array([1, 2, 3, 2, 3, 4], dtype=np.float64)
@@ -83,14 +85,14 @@ def test_codegen(compiler, buffer):
     a = np.array([1, 2, 3], dtype=np.float64)
     buf = buffer(a)
 
-    a_var = asm.Variable("a", buf.format)
-    i_var = asm.Variable("i", int)
-    length_var = asm.Variable("l", int)
-    a_slt = asm.Slot("a_", buf.format)
+    a_var = asm.Variable("a", buf.ftype)
+    i_var = asm.Variable("i", np.intp)
+    length_var = asm.Variable("l", np.intp)
+    a_slt = asm.Slot("a_", buf.ftype)
     prgm = asm.Module(
         (
             asm.Function(
-                asm.Variable("test_function", int),
+                asm.Variable("test_function", np.intp),
                 (a_var,),
                 asm.Block(
                     (
@@ -152,10 +154,10 @@ def test_dot_product(compiler, buffer):
     i = asm.Variable("i", np.int64)
     ab = buffer(a)
     bb = buffer(b)
-    ab_v = asm.Variable("a", ab.format)
-    ab_slt = asm.Slot("a_", ab.format)
-    bb_v = asm.Variable("b", bb.format)
-    bb_slt = asm.Slot("b_", bb.format)
+    ab_v = asm.Variable("a", ab.ftype)
+    ab_slt = asm.Slot("a_", ab.ftype)
+    bb_v = asm.Variable("b", bb.ftype)
+    bb_slt = asm.Slot("b_", bb.ftype)
     prgm = asm.Module(
         (
             asm.Function(
@@ -212,6 +214,75 @@ def test_dot_product(compiler, buffer):
     expected = interp.dot_product(a_buf, b_buf)
 
     assert np.isclose(result, expected), f"Expected {expected}, got {result}"
+
+
+@pytest.mark.parametrize(
+    ["compiler", "extension", "buffer"],
+    [
+        (CGenerator(), ".c", NumpyBuffer),
+        (NumbaGenerator(), ".py", NumpyBuffer),
+    ],
+)
+def test_dot_product_regression(compiler, extension, buffer, file_regression):
+    a = np.array([1, 2, 3], dtype=np.float64)
+    b = np.array([4, 5, 6], dtype=np.float64)
+
+    c = asm.Variable("c", np.float64)
+    i = asm.Variable("i", np.int64)
+    ab = buffer(a)
+    bb = buffer(b)
+    ab_v = asm.Variable("a", ab.ftype)
+    ab_slt = asm.Slot("a_", ab.ftype)
+    bb_v = asm.Variable("b", bb.ftype)
+    bb_slt = asm.Slot("b_", bb.ftype)
+    prgm = asm.Module(
+        (
+            asm.Function(
+                asm.Variable("dot_product", np.float64),
+                (
+                    ab_v,
+                    bb_v,
+                ),
+                asm.Block(
+                    (
+                        asm.Assign(c, asm.Literal(np.float64(0.0))),
+                        asm.Unpack(ab_slt, ab_v),
+                        asm.Unpack(bb_slt, bb_v),
+                        asm.ForLoop(
+                            i,
+                            asm.Literal(np.int64(0)),
+                            asm.Length(ab_slt),
+                            asm.Block(
+                                (
+                                    asm.Assign(
+                                        c,
+                                        asm.Call(
+                                            asm.Literal(operator.add),
+                                            (
+                                                c,
+                                                asm.Call(
+                                                    asm.Literal(operator.mul),
+                                                    (
+                                                        asm.Load(ab_slt, i),
+                                                        asm.Load(bb_slt, i),
+                                                    ),
+                                                ),
+                                            ),
+                                        ),
+                                    ),
+                                )
+                            ),
+                        ),
+                        asm.Repack(ab_slt),
+                        asm.Repack(bb_slt),
+                        asm.Return(c),
+                    )
+                ),
+            ),
+        )
+    )
+
+    file_regression.check(compiler(prgm), extension=extension)
 
 
 @pytest.mark.parametrize(
@@ -307,8 +378,8 @@ def test_simple_struct(compiler):
     p = Point(np.float64(1.0), np.float64(2.0))
     x = (1, 4)
 
-    p_var = asm.Variable("p", format(p))
-    x_var = asm.Variable("x", format(x))
+    p_var = asm.Variable("p", ftype(p))
+    x_var = asm.Variable("x", ftype(x))
     res_var = asm.Variable("res", np.float64)
     mod = compiler(
         asm.Module(

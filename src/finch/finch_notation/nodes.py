@@ -5,7 +5,9 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 from ..algebra import element_type, query_property, return_type
-from ..symbolic import Term, TermTree, literal_repr
+from ..finch_assembly import AssemblyNode
+from ..symbolic import Context, FType, Term, TermTree, literal_repr
+from ..util import qual_str
 
 
 @dataclass(eq=True, frozen=True)
@@ -28,6 +30,12 @@ class NotationNode(Term, ABC):
     @classmethod
     def from_children(cls, *children):
         return cls(*children)
+
+    def __str__(self):
+        """Returns a string representation of the node."""
+        ctx = NotationPrinterContext()
+        ctx(self)
+        return ctx.emit()
 
 
 @dataclass(eq=True, frozen=True)
@@ -75,7 +83,7 @@ class Value(NotationExpression):
     type `type_`.
     """
 
-    val: Any
+    ex: AssemblyNode
     type_: Any
 
     @property
@@ -137,6 +145,28 @@ class AccessMode(NotationNode):
     """
 
 
+class AccessFType(FType):
+    obj: Any
+
+    def __init__(self, obj: Any):
+        self.obj = obj
+
+    def __eq__(self, other):
+        if not isinstance(other, AccessFType):
+            return False
+        return self.obj == other.obj
+
+    def __hash__(self):
+        return hash(self.obj)
+
+    @property
+    def element_type(self):
+        """
+        Returns the element type of the access ftype.
+        """
+        return element_type(self.obj)
+
+
 @dataclass(eq=True, frozen=True)
 class Access(NotationTree, NotationExpression):
     """
@@ -150,8 +180,9 @@ class Access(NotationTree, NotationExpression):
 
     @property
     def result_format(self):
-        # Placeholder: in a real system, would use tns/type system
-        return element_type(self.tns.result_format)
+        if len(self.idxs) == 0:
+            return self.tns.result_format
+        return AccessFType(self.tns.result_format)
 
     @classmethod
     def from_children(cls, tns, mode, *idxs):
@@ -219,6 +250,12 @@ class Unwrap(NotationTree):
     @property
     def children(self):
         return [self.arg]
+
+    def result_format(self):
+        """
+        Returns the type of the unwrapped value.
+        """
+        return element_type(self.arg.result_format)
 
 
 @dataclass(eq=True, frozen=True)
@@ -300,6 +337,90 @@ class Assign(NotationTree):
     @property
     def children(self):
         return [self.lhs, self.rhs]
+
+
+@dataclass(eq=True, frozen=True)
+class Stack(NotationExpression):
+    """
+    A logical AST expression representing an object using a set `obj` of
+    expressions, variables, and literals in the target language.
+
+    Attributes:
+        obj: The object referencing symbolic variables defined in the target language.
+        type: The type of the symbolic object.
+    """
+
+    obj: Any
+    type: Any
+
+    @property
+    def result_format(self):
+        """Returns the type of the expression."""
+        return self.type
+
+
+@dataclass(eq=True, frozen=True)
+class Slot(NotationExpression):
+    """
+    Represents a register to a symbolic object. Using a register in an
+    expression creates a copy of the object.
+
+    Attributes:
+        name: The name of the symbolic object to register.
+        type: The type of the symbolic object.
+    """
+
+    name: str
+    type: Any
+
+    @property
+    def result_format(self):
+        """Returns the type of the expression."""
+        return self.type
+
+    def __repr__(self) -> str:
+        return literal_repr(type(self).__name__, asdict(self))
+
+
+@dataclass(eq=True, frozen=True)
+class Unpack(NotationTree):
+    """
+    Attempts to convert `rhs` into a symbolic, which can be registerd with
+    `lhs`. The original object must not be accessed or modified until the
+    corresponding `Repack` node is reached.
+
+    Attributes:
+        lhs: The symbolic object to write to.
+        rhs: The original object to read from.
+    """
+
+    lhs: Slot
+    rhs: NotationExpression
+
+    @property
+    def children(self):
+        """Returns the children of the node."""
+        return [self.lhs, self.rhs]
+
+
+@dataclass(eq=True, frozen=True)
+class Repack(NotationTree):
+    """
+    Registers updates from a symbolic object `val` with the original
+    object `obj`. The original object may now be accessed and modified.
+
+    Attributes:
+        slot: The symbolic object to read from.
+        obj: The original object to write to.
+    """
+
+    val: Slot
+    obj: NotationExpression
+
+    @property
+    def children(self):
+        """Returns the children of the node."""
+        return [self.val, self.obj]
 
 
 @dataclass(eq=True, frozen=True)
@@ -479,3 +600,149 @@ class Module(NotationTree):
     @classmethod
     def from_children(cls, *funcs):
         return cls(funcs)
+
+
+class NotationPrinterContext(Context):
+    def __init__(self, tab="    ", indent=0):
+        super().__init__()
+        self.tab = tab
+        self.indent = indent
+
+    @property
+    def feed(self) -> str:
+        return self.tab * self.indent
+
+    def emit(self):
+        return "\n".join([*self.preamble, *self.epilogue])
+
+    def block(self) -> NotationPrinterContext:
+        blk = super().block()
+        blk.indent = self.indent
+        blk.tab = self.tab
+        return blk
+
+    def subblock(self):
+        blk = self.block()
+        blk.indent = self.indent + 1
+        return blk
+
+    def __call__(self, prgm: NotationNode):
+        feed = self.feed
+        match prgm:
+            case Literal(value):
+                return qual_str(value)
+            case Variable(name, _):
+                return str(name)
+            case Value(name, _):
+                return str(name)
+            case Slot(name, _):
+                return str(name)
+            case Call(f, args):
+                return f"{self(f)}({', '.join(self(arg) for arg in args)})"
+            case Unwrap(tns):
+                return f"unwrap({self(tns)})"
+            case Assign(Variable(var_n, var_t), val):
+                self.exec(f"{feed}{var_n}: {qual_str(var_t)} = {self(val)}")
+                return None
+            case Access(tns, mode, idxs):
+                tns_e = self(tns)
+                idxs_e = [self(idx) for idx in idxs]
+                match mode:
+                    case Read():
+                        return f"read({tns_e}, {idxs_e})"
+                    case Update(op):
+                        op_e = self(op)
+                        return f"update({tns_e}, {idxs_e}, {op_e})"
+                    case _:
+                        raise NotImplementedError(f"Unrecognized access mode: {mode}")
+                return None
+            case Increment(tns, val):
+                tns_e = self(tns)
+                val_e = self(val)
+                self.exec(f"{feed}increment({tns_e}, {val_e})")
+                return None
+            case Block(bodies):
+                ctx_2 = self.block()
+                for body in bodies:
+                    ctx_2(body)
+                self.exec(ctx_2.emit())
+                return None
+            case Loop(idx, ext, body):
+                idx_e = self(idx)
+                ext_e = self(ext)
+                ctx_2 = self.subblock()
+                ctx_2(body)
+                body_code = ctx_2.emit()
+                self.exec(f"{feed}loop({idx_e}, {ext_e}):\n{body_code}")
+                return None
+            case Declare(tns, init, op, shape):
+                shape_e = [self(s) for s in shape]
+                self.exec(
+                    f"{feed}declare({self(tns)}, {self(init)}, {self(op)}, {shape_e})"
+                )
+                return None
+            case Freeze(tns, op):
+                self.exec(f"{feed}freeze({self(tns)}, {self(op)})")
+                return None
+            case Thaw(tns, op):
+                return f"thaw({self(tns)}, {self(op)})"
+            case Unpack(Slot(var_n, var_t), val):
+                self.exec(f"{feed}{var_n}: {qual_str(var_t)} = unpack({self(val)})")
+                return None
+            case Repack(Slot(var_n, var_t), obj):
+                self.exec(f"{feed}repack({var_n}, {self(obj)})")
+                return None
+            case If(cond, body):
+                cond_code = self(cond)
+                ctx_2 = self.subblock()
+                ctx_2(body)
+                body_code = ctx_2.emit()
+                self.exec(f"{feed}if {cond_code}:\n{body_code}")
+                return None
+            case IfElse(cond, body, else_body):
+                cond_code = self(cond)
+                ctx_2 = self.subblock()
+                ctx_2(body)
+                body_code = ctx_2.emit()
+                ctx_3 = self.subblock()
+                ctx_3(else_body)
+                else_body_code = ctx_3.emit()
+                self.exec(
+                    f"{feed}if {cond_code}:\n{body_code}\n{feed}else:\n{else_body_code}"
+                )
+                return None
+            case Function(Variable(func_n, ret_t), args, body):
+                ctx_2 = self.subblock()
+                arg_decls = []
+                for arg in args:
+                    match arg:
+                        case Variable(name, t):
+                            arg_decls.append(f"{name}: {qual_str(t)}")
+                        case _:
+                            raise NotImplementedError(
+                                f"Unrecognized argument type: {arg}"
+                            )
+                ctx_2(body)
+                body_code = ctx_2.emit()
+                feed = self.feed
+                self.exec(
+                    f"{feed}def {func_n}({', '.join(arg_decls)}) -> "
+                    f"{qual_str(ret_t)}:\n"
+                    f"{body_code}\n"
+                )
+                return None
+            case Return(value):
+                self.exec(f"{feed}return {self(value)}")
+                return None
+            case Module(funcs):
+                for func in funcs:
+                    if not isinstance(func, Function):
+                        raise NotImplementedError(
+                            f"Unrecognized function type: {type(func)}"
+                        )
+                    self(func)
+                return None
+            case _:
+                raise NotImplementedError(
+                    f"Unrecognized notation node type: {type(prgm)}"
+                )
