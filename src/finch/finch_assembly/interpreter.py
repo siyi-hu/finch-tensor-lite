@@ -329,6 +329,9 @@ class AssemblyInterpreter:
                                 f"Unrecognized function definition: {func}"
                             )
                 return AssemblyInterpreterModule(self, kernels)
+            case asm.Print(message, args):
+                print(f"[TEST] Print({message}, {args})")
+                return None
             case asm.Stack(val):
                 raise NotImplementedError(
                     "AssemblyInterpreter does not support symbolic, no target language"

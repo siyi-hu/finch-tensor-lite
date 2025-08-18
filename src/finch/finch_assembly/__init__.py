@@ -1,6 +1,5 @@
 from .buffer import Buffer, BufferFType, element_type, length_type
 from .interpreter import AssemblyInterpreter, AssemblyInterpreterKernel
-from .logger import debug
 from .nodes import (
     AssemblyNode,
     Assign,
@@ -17,6 +16,7 @@ from .nodes import (
     Literal,
     Load,
     Module,
+    Print,
     Repack,
     Resize,
     Return,
@@ -52,6 +52,7 @@ __all__ = [
     "Load",
     "Module",
     "NamedTupleFType",
+    "Print",
     "Repack",
     "Resize",
     "Return",
@@ -63,7 +64,6 @@ __all__ = [
     "Unpack",
     "Variable",
     "WhileLoop",
-    "debug",
     "element_type",
     "length_type",
 ]
