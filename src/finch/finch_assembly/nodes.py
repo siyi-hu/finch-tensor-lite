@@ -718,7 +718,7 @@ class AssemblyPrinterContext(Context):
                     self(func)
                 return None
             case Print(message, args):
-                self.exec(f"{feed}print {self(message, args)}")
+                self.exec(f"{feed}print {message} {self(args)}")
                 return None
             case _:
                 raise NotImplementedError
