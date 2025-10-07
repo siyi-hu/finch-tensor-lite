@@ -71,6 +71,7 @@ class AssemblyInterpreter:
         types=None,
         loop_state=None,
         function_state=None,
+        stdout=None,
     ):
         if bindings is None:
             bindings = ScopedDict()
@@ -83,6 +84,9 @@ class AssemblyInterpreter:
         self.types = types
         self.loop_state = loop_state
         self.function_state = function_state
+        if stdout is None:
+            stdout = sys.stdout
+        self.stdout = stdout
 
     def scope(
         self,
@@ -91,6 +95,7 @@ class AssemblyInterpreter:
         types=None,
         loop_state=None,
         function_state=None,
+        stdout=None,
     ):
         """
         Create a new scope for the interpreter.
@@ -106,12 +111,15 @@ class AssemblyInterpreter:
             loop_state = self.loop_state
         if function_state is None:
             function_state = self.function_state
+        if stdout is None:
+            stdout = self.stdout
         return AssemblyInterpreter(
             bindings=bindings,
             slots=slots,
             types=types,
             loop_state=loop_state,
             function_state=function_state,
+            stdout=stdout,
         )
 
     def should_halt(self):
@@ -338,9 +346,8 @@ class AssemblyInterpreter:
             case asm.Print(args):
                 args_value_str = ""
                 for arg in args:
-                    if isinstance(arg, asm.Variable):
-                        args_value_str = args_value_str + f"{self(arg)} "
-                print(args_value_str, file=sys.stdout)
+                    args_value_str = args_value_str + f"{self(arg)} "
+                print(args_value_str, file=self.stdout)
                 return None
             case asm.Stack(val):
                 raise NotImplementedError(
